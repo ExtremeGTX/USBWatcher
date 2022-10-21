@@ -77,6 +77,12 @@ jobs:
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v1.1.1
 
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.1.1
+
+    - name: Restore NuGet packages
+      run: nuget restore src/USBWatcher.sln
+      
     - name: Build the solution
       run: msbuild src/USBWatcher.sln
 
