@@ -45,7 +45,7 @@ on:
     branches: [ "main" ]
 
 env:
-  RELEASE_NUMBER: 1
+  RELEASE_NUMBER: 1.0
   
 jobs:
 
@@ -84,18 +84,10 @@ jobs:
       run: msbuild src/USBWatcher.sln
       
     - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
+      uses: thedoctor0/zip-release@main
       with:
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: .
-        asset_name: Release-${{ env.RELEASE_NUMBER }}
-        tag: ${{ github.ref }}
-        overwrite: true
-        body: "This is my release text"
+        type: 'zip'
+        path: src/bin/Release/net6.0-windows
+        filename: 'release-v${{ RELEASE_NUMBER }}.zip'
+        exclusions: '*.git* /*node_modules/* .editorconfig'
 
-    # Upload the MSIX package: https://github.com/marketplace/actions/upload-a-build-artifact
-    #- name: Upload build artifacts
-    #  uses: actions/upload-artifact@v3
-    #  with:
-    #    name: MSIX Package
-    #    path: ${{ env.Wap_Project_Directory }}\AppPackages
