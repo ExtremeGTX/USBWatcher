@@ -44,6 +44,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  RELEASE_NUMBER: 1
+  
 jobs:
 
   build:
@@ -54,12 +57,6 @@ jobs:
 
     runs-on: windows-latest  # For a list of available runner types, refer to
                              # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idruns-on
-
-    env:
-      Solution_Name: your-solution-name                         # Replace with your solution name, i.e. MyWpfApp.sln.
-      Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-      Wap_Project_Directory: your-wap-project-directory-name    # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
-      Wap_Project_Path: your-wap-project-path                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
 
     steps:
     - name: Checkout
@@ -85,6 +82,16 @@ jobs:
       
     - name: Build the solution
       run: msbuild src/USBWatcher.sln
+      
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: src/bin/Release/net6.0-windows/*
+        asset_name: Release-${{ env.RELEASE_NUMBER }}
+        tag: ${{ github.ref }}
+        overwrite: true
+        body: "This is my release text"
 
     # Upload the MSIX package: https://github.com/marketplace/actions/upload-a-build-artifact
     #- name: Upload build artifacts
