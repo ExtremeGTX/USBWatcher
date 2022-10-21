@@ -87,7 +87,7 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: src/bin/Release/net6.0-windows/*
+        file: src/bin/Release/net6.0-windows
         asset_name: Release-${{ env.RELEASE_NUMBER }}
         tag: ${{ github.ref }}
         overwrite: true
