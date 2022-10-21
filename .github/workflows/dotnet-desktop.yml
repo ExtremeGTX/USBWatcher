@@ -91,6 +91,20 @@ jobs:
         filename: 'release-v${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
+    - name: Lister action
+      id: pl
+      uses: Rishabh510/Path-lister-action@master
+      with:
+        path: ".github/"
+        type: ".yml"
+
+    - name: Output results
+      run: |
+          echo "Found ${{ steps.pl.outputs.path_count }} file(s) with this extension:"
+          for i in ${{ steps.pl.outputs.paths }}; do
+          echo $i
+          done
+
     - name: Upload Release
       uses: ncipollo/release-action@v1.11.1
       with:
