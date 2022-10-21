@@ -65,7 +65,7 @@ jobs:
         fetch-depth: 0
 
     # Install the .NET Core workload
-    - name: Install .NET Core
+    - name: Install .NET Framework
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 6.0.x
@@ -82,12 +82,16 @@ jobs:
       
     - name: Build the solution
       run: msbuild src/USBWatcher.sln
-      
+    
+    - name: Cleanup output dir
+      run: |
+        rm .\src\bin\Release\net6.0-windows\*.json, .\src\bin\Release\net6.0-windows\*.pdb
+
     - name: Create zip archieve
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        path: .\src\bin\Debug\net6.0-windows\
+        path: .\src\bin\Debug\net6.0-windows\*
         filename: 'release-v${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
@@ -98,7 +102,7 @@ jobs:
     - name: Upload Release
       uses: ncipollo/release-action@v1.11.1
       with:
-        tag: 'rel-v1'
+        tag: ${{ env.RELEASE_NUMBER }}
         commit: 'main'
-        artifacts: 'release-v${{ env.RELEASE_NUMBER }}.zip'
+        artifacts: 'USBWatcher-v${{ env.RELEASE_NUMBER }}.zip'
         token: ${{ secrets.GITHUB_TOKEN }}
