@@ -83,7 +83,7 @@ jobs:
     - name: Build the solution
       run: msbuild src/USBWatcher.sln
       
-    - name: Upload binaries to release
+    - name: Create zip archieve
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
@@ -91,3 +91,8 @@ jobs:
         filename: 'release-v${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
+    - name: Upload Release
+      uses: ncipollo/release-action@v1
+      with:
+        artifacts: 'release-v${{ env.RELEASE_NUMBER }}.zip'
+        token: ${{ secrets.GITHUB_TOKEN }}
