@@ -88,6 +88,6 @@ jobs:
       with:
         type: 'zip'
         path: src/bin/Release/net6.0-windows
-        filename: 'release-v${{ RELEASE_NUMBER }}.zip'
+        filename: 'release-v${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
