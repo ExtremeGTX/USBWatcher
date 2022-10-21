@@ -92,7 +92,7 @@ jobs:
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
     - name: Upload Release
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@v1.11.1
       with:
         artifacts: 'release-v${{ env.RELEASE_NUMBER }}.zip'
         token: ${{ secrets.GITHUB_TOKEN }}
