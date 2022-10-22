@@ -81,7 +81,7 @@ jobs:
       run: nuget restore src/USBWatcher.sln
       
     - name: Build the solution
-      run: msbuild src/USBWatcher.sln
+      run: msbuild src/USBWatcher.sln /property:Configuration=${{ matrix.configuration }}
     
     - name: Cleanup output dir
       run: |
