@@ -51,12 +51,6 @@ USB Watcher is a simple tool mainly to rename USB Serial ports on Windows
 - Show list of Serial ports as systray tooltip
 - Listen to USB Insert/Remove Events
 
-
-
-
-
-
-
 ### Built With
 
 * [![.NET]][.NET-url]

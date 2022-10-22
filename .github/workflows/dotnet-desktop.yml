@@ -1,0 +1,70 @@
+# refer to https://github.com/microsoft/github-actions-for-desktop-apps
+
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+'
+
+env:
+  RELEASE_NUMBER: ${{github.ref_name}}
+
+jobs:
+
+  build:
+
+    strategy:
+      matrix:
+        configuration: [Release]
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Framework
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 6.0.x
+
+    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1.1.1
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.1.1
+
+    - name: Restore NuGet packages
+      run: nuget restore src/USBWatcher.sln
+
+    - name: Build the solution
+      run: msbuild src/USBWatcher.sln /property:Configuration=${{ matrix.configuration }}
+
+    - name: Cleanup output dir
+      run: |
+        rm .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.json, .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.pdb
+
+    - name: Create zip archieve
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        path: .\src\bin\${{ matrix.configuration }}\net6.0-windows\*
+        filename: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
+        exclusions: '*.git* /*node_modules/* .editorconfig'
+
+    - name: Output results
+      run: |
+          Get-ChildItem -Recurse
+
+    - name: Upload Release
+      uses: ncipollo/release-action@v1.11.1
+      with:
+        tag: ${{ env.RELEASE_NUMBER }}
+        commit: 'main'
+        artifacts: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
+        token: ${{ secrets.GITHUB_TOKEN }}
