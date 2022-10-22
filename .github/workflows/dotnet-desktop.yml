@@ -45,7 +45,7 @@ on:
     branches: [ "main" ]
 
 env:
-  RELEASE_NUMBER: 1.0
+  RELEASE_NUMBER: '1.0'
   
 jobs:
 
@@ -92,7 +92,7 @@ jobs:
       with:
         type: 'zip'
         path: .\src\bin\${{ matrix.configuration }}\net6.0-windows\*
-        filename: 'release-v${{ env.RELEASE_NUMBER }}.zip'
+        filename: 'USBWatcher-v${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
     - name: Output results
