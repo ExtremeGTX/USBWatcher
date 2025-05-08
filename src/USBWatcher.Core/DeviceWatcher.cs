@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Management;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Management;
 
-namespace USBWatcher
+namespace USBWatcher.Core
 {
-    class DeviceChangeEventArgs : EventArgs
-    {
-        public String Description { get; set; } = "None";
-        public String DeviceID { get; set; } = "UnkownID";
-        public Boolean Present { get; set; } = false;
-        public DeviceChangeEventArgs() { }
-    }
     internal class DeviceWatcher
     {
-        public event EventHandler<DeviceChangeEventArgs>? DeviceChangeEvent;
+        internal event EventHandler<DeviceChangeEventArgs>? DeviceChangeEvent;
 
-        public DeviceWatcher()
+        internal DeviceWatcher()
         {
             StartWatcher();
         }

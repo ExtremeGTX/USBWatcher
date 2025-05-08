@@ -2,27 +2,28 @@ using System.ComponentModel;
 using System.Management;
 using System.Reflection;
 using System.Windows.Forms;
-
 using USBWatcher.Properties;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using USBWatcher.Core;
+using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace USBWatcher
 {
     public partial class Main : Form
     {
-        const string GUID_DEVCLASS_USB = @"{4d36e978-e325-11ce-bfc1-08002be10318}";
-        const string WMI_QUERY = $"SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{GUID_DEVCLASS_USB}'";
-        List<UsbDevice> UsbDevicesList = new List<UsbDevice>();
-
+        private USBWatcherCore usb_watcher;
         private NotifyIcon? trayIcon;
+
         public Main()
         {
             InitializeComponent();
             InitializeTrayIcon();
 
-            GetUSBPorts();
-            DeviceWatcher deviceWatcher = new DeviceWatcher();
-            deviceWatcher.DeviceChangeEvent += DeviceWatcher_DeviceChangeEvent;
+            Settings.Load();
+            usb_watcher = new USBWatcherCore(DeviceWatcher_DeviceChangeEvent);
+            RefreshUSBPortsList();
         }
 
         private void InitializeTrayIcon()
@@ -64,8 +65,7 @@ namespace USBWatcher
                 ListViewItem lvi = new ListViewItem(DevInfo);
                 lsvEvents.Items.Add(lvi);
 
-                /* Refresh current device list */
-                GetUSBPorts();
+                RefreshUSBPortsList();
             });
         }
 
@@ -84,35 +84,35 @@ namespace USBWatcher
                     break;
             }
         }
-        void GetUSBPorts()
-        {
-            UsbDevicesList.Clear();
-            lsvDevices.Items.Clear();
-            using (var searcher = new ManagementObjectSearcher(WMI_QUERY))
-            {
-                var ports = searcher.Get().Cast<ManagementBaseObject>().ToList();
-                for (int i = 0; i < ports.Count; i++)
-                {
-                    string? DevID = ports[i]["DeviceID"].ToString();
-                    if (DevID == null)
-                        continue;
 
-                    UsbDevice usbdev = new UsbDevice(DevID);
-                    UsbDevicesList.Add(usbdev);
-                    string?[] DevInfo = new string?[]
-                    {
-                        usbdev.FriendlyName,
-                        usbdev.PortName,
-                        usbdev.VID,
-                        usbdev.PID,
-                    };
-                    ListViewItem lvi = new ListViewItem(DevInfo);
-                    lsvDevices.Items.Add(lvi);
+        void RefreshUSBPortsList()
+        {
+            lsvDevices.Items.Clear();
+            IReadOnlyList<UsbDeviceRecord> UsbDevicesList = usb_watcher.GetUsbDevicesList();
+
+            foreach (UsbDeviceRecord usbdev in UsbDevicesList)
+            {
+                string[] DevInfo = new string[]
+                {
+                    usbdev.FriendlyName,
+                    usbdev.PortName,
+                    usbdev.VID,
+                    usbdev.PID,
+                };
+
+                var storedFriendlyName = Settings.GetDeviceName(usbdev.VID, usbdev.PID);
+                if (!string.IsNullOrEmpty(storedFriendlyName))
+                { 
+                    usb_watcher.SetUSBDeviceFriendlyName(usbdev.PortName, storedFriendlyName);
+                    DevInfo[0] = storedFriendlyName;
                 }
+
+                ListViewItem lvi = new ListViewItem(DevInfo);
+                lsvDevices.Items.Add(lvi);
             }
+
             refresh_trayiconText();
         }
-
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             /* Close to systray */
@@ -132,8 +132,25 @@ namespace USBWatcher
             } 
             else
             {
-                UsbDevicesList[e.Item].FriendlyName = e.Label;
-                refresh_trayiconText();
+                string newFriendlyName = e.Label;
+                string? portName = lsvDevices.SelectedItems[0].SubItems[1].Text;
+                string? VID = lsvDevices.SelectedItems[0].SubItems[2].Text;
+                string? PID = lsvDevices.SelectedItems[0].SubItems[3].Text;
+
+                /* Make sure the user entered friendlyname doesn't contain (COMx) string 
+                 * COMx is automatically appended by SetUSBDeviceFriendlyName
+                 */
+                if (Regex.IsMatch(newFriendlyName, @"\(COM[0-9]{1,3}\)$"))
+                {
+                    newFriendlyName = Regex.Replace(newFriendlyName, @"\(COM[0-9]{1,3}\)$", "").Trim();
+                }
+
+                if (usb_watcher.SetUSBDeviceFriendlyName(portName, e.Label))
+                {
+                    Settings.SaveDeviceName(VID, PID, newFriendlyName);
+                }
+
+                //refresh_trayiconText();
             }
         }
 
@@ -145,18 +162,18 @@ namespace USBWatcher
             }
 
             string myText = this.Text;
-            foreach (UsbDevice usbdev in UsbDevicesList)
-            {
-                myText += Environment.NewLine + usbdev.PortName + ": " + usbdev.FriendlyName ;
-            }
+            //foreach (UsbDevice usbdev in UsbDevicesList)
+            //{
+            //    myText += Environment.NewLine + usbdev.PortName + ": " + usbdev.FriendlyName ;
+            //}
 
             /// https://stackoverflow.com/questions/579665/how-can-i-show-a-systray-tooltip-longer-than-63-chars
-            Type t = typeof(NotifyIcon);
-            BindingFlags hidden = BindingFlags.NonPublic | BindingFlags.Instance;
+            //Type t = typeof(NotifyIcon);
+            //BindingFlags hidden = BindingFlags.NonPublic | BindingFlags.Instance;
 
-            t.GetField("text", hidden).SetValue(trayIcon, myText);
-            if ((bool)t.GetField("added", hidden).GetValue(trayIcon))
-                t.GetMethod("UpdateIcon", hidden).Invoke(trayIcon, new object[] { true });
+            //t.GetField("text", hidden).SetValue(trayIcon, myText);
+            //if ((bool)t.GetField("added", hidden).GetValue(trayIcon))
+            //    t.GetMethod("UpdateIcon", hidden).Invoke(trayIcon, new object[] { true });
 
 
         }
@@ -176,7 +193,15 @@ namespace USBWatcher
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("USB Watcher by Mohamed ElShahawi\nhttps://github.com/ExtremeGTX/USBWatcher");
+            Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+            string versionString = version != null ?
+                $"v{version.Major}.{version.Minor}.{version.Build}" : "";
+
+            MessageBox.Show(
+                $"USB Watcher {versionString}\nby Mohamed ElShahawi\nhttps://github.com/ExtremeGTX/USBWatcher",
+                "About USB Watcher",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -184,5 +209,4 @@ namespace USBWatcher
             lsvEvents.Items.Clear();
         }
     }
-
 }
