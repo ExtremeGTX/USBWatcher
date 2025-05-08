@@ -62,7 +62,10 @@ namespace USBWatcher
                                 e.Description,
                                 e.Present ? "Inserted" : "Removed"
                             };
+
                 ListViewItem lvi = new ListViewItem(DevInfo);
+                lvi.BackColor = e.Present ? Color.LightGreen : Color.LightPink;
+
                 lsvEvents.Items.Add(lvi);
 
                 RefreshUSBPortsList();
