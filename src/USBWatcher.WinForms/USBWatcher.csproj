@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="TaskScheduler" Version="2.12.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\USBWatcher.Core\USBWatcher.Core.csproj" />
   </ItemGroup>
 

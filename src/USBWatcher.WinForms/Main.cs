@@ -8,6 +8,7 @@ using USBWatcher.Core;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Microsoft.Win32.TaskScheduler;
 
 namespace USBWatcher
 {
@@ -29,11 +30,19 @@ namespace USBWatcher
         private void InitializeTrayIcon()
         {
             ContextMenuStrip contextMenuStrip = new ContextMenuStrip();
+            ToolStripLabel ToolStripLabelSettings = new ToolStripLabel("&Settings") { Enabled = false};
+            ToolStripMenuItem stripItemStartUp = new ToolStripMenuItem("&Start USBWatcher with Windows") { CheckOnClick = true };
+            ToolStripSeparator separator = new ToolStripSeparator();
             ToolStripItem stripItemOpen = new ToolStripMenuItem("&Open");
             ToolStripItem stripItemExit = new ToolStripMenuItem("E&xit");
+
             stripItemOpen.Click += TrayIcon_Click;
             stripItemExit.Click += stripItemExit_Click;
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { stripItemOpen, stripItemExit });
+            stripItemStartUp.Click += stripItemStartUp_Click;
+
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { ToolStripLabelSettings , stripItemStartUp, separator, stripItemOpen, stripItemExit });
+            
+            stripItemStartUp.Checked = CheckStartupTask();
 
             trayIcon = new NotifyIcon()
             {
@@ -49,6 +58,19 @@ namespace USBWatcher
             trayIcon?.Dispose();
             this.Dispose();
             Application.Exit(); 
+        }
+
+        private void stripItemStartUp_Click(object? sender, EventArgs e)
+        {
+            ToolStripMenuItem stripItemStartUp = (sender as ToolStripMenuItem)!;
+            if (stripItemStartUp.Checked)
+            {
+                CreateStartupTask();
+            }
+            else
+            {
+                RemoveStartupTask();
+            }
         }
 
         private void DeviceWatcher_DeviceChangeEvent(object? sender, DeviceChangeEventArgs e)
@@ -135,6 +157,11 @@ namespace USBWatcher
             } 
             else
             {
+                if (lsvDevices.SelectedItems.Count != 1)
+                {
+                    return;
+                }
+
                 string newFriendlyName = e.Label;
                 string? portName = lsvDevices.SelectedItems[0].SubItems[1].Text;
                 string? VID = lsvDevices.SelectedItems[0].SubItems[2].Text;
@@ -210,6 +237,65 @@ namespace USBWatcher
         private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             lsvEvents.Items.Clear();
+        }
+
+        public void CreateStartupTask()
+        {
+            string taskName = "USBWatcher_AutoStart";
+            string exePath = Application.ExecutablePath;
+
+            using (TaskService ts = new TaskService())
+            {
+                // Create a new task definition and assign properties
+                TaskDefinition td = ts.NewTask();
+                td.RegistrationInfo.Description = "Starts USBWatcher with Admin rights at user logon";
+                td.Principal.RunLevel = TaskRunLevel.Highest; // Run with highest privileges (admin)
+                td.Principal.LogonType = TaskLogonType.InteractiveToken; // Only when user is logged on
+
+                // Create a trigger that starts at logon of any user
+                td.Triggers.Add(new LogonTrigger());
+
+                // Create an action that runs your executable
+                td.Actions.Add(new ExecAction(exePath, null, Path.GetDirectoryName(exePath)));
+
+                // Register the task in the root folder
+                ts.RootFolder.RegisterTaskDefinition(taskName, td, TaskCreation.CreateOrUpdate, null, null, TaskLogonType.InteractiveToken, null);
+            }
+        }
+
+        public void RemoveStartupTask()
+        {
+            string taskName = "USBWatcher_AutoStart";
+
+            using (TaskService ts = new TaskService())
+            {
+                // Check if the task exists
+                var task = ts.GetTask(taskName);
+                if (task != null)
+                {
+                    ts.RootFolder.DeleteTask(taskName);
+                    Console.WriteLine("Scheduled task removed successfully.");
+                }
+                else
+                {
+                    Console.WriteLine("Scheduled task not found.");
+                }
+            }
+        }
+        public bool CheckStartupTask()
+        {
+            string taskName = "USBWatcher_AutoStart";
+
+            using (TaskService ts = new TaskService())
+            {
+                // Check if the task exists
+                var task = ts.GetTask(taskName);
+                if (task != null)
+                {
+                    return true;
+                }
+                return false;
+            }
         }
     }
 }
