@@ -156,8 +156,9 @@
             ClientSize = new Size(448, 458);
             Controls.Add(splitContainer1);
             Controls.Add(menuStrip1);
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
+            MaximizeBox = false;
             Name = "Main";
             Text = "USB Watcher";
             FormClosing += Form1_FormClosing;
