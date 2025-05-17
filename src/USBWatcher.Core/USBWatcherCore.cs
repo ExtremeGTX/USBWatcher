@@ -70,8 +70,6 @@ namespace USBWatcher.Core
                 d.SerialNumber,
                 d.Manufacturer
             )).ToList().AsReadOnly();
-
-            //return UsbDevicesList;
         }
 
         public bool SetUSBDeviceFriendlyName(string portName, string newName)
@@ -86,6 +84,18 @@ namespace USBWatcher.Core
                 }
             }
             return false;
+        }
+        public string GetUSBDeviceFriendlyName(string portName)
+        {
+            /* Find the device portName and change its Friendly name */
+            foreach (UsbDevice usbdev in UsbDevicesList)
+            {
+                if (usbdev.PortName == portName)
+                {
+                    return usbdev.FriendlyName;
+                }
+            }
+            throw new Exception($"Device with port name {portName} not found\nPlease Open \"Device Manager\" and reinstall the device.");
         }
     }
 }
