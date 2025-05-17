@@ -1,14 +1,7 @@
-using System.ComponentModel;
-using System.Management;
-using System.Reflection;
-using System.Windows.Forms;
-using USBWatcher.Properties;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using USBWatcher.Core;
-using System.Text.Json;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
 using Microsoft.Win32.TaskScheduler;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using USBWatcher.Core;
 
 namespace USBWatcher
 {
@@ -30,7 +23,7 @@ namespace USBWatcher
         private void InitializeTrayIcon()
         {
             ContextMenuStrip contextMenuStrip = new ContextMenuStrip();
-            ToolStripLabel ToolStripLabelSettings = new ToolStripLabel("&Settings") { Enabled = false};
+            ToolStripLabel ToolStripLabelSettings = new ToolStripLabel("&Settings") { Enabled = false };
             ToolStripMenuItem stripItemStartUp = new ToolStripMenuItem("&Start USBWatcher with Windows") { CheckOnClick = true };
             ToolStripSeparator separator = new ToolStripSeparator();
             ToolStripItem stripItemOpen = new ToolStripMenuItem("&Open");
@@ -40,8 +33,8 @@ namespace USBWatcher
             stripItemExit.Click += stripItemExit_Click;
             stripItemStartUp.Click += stripItemStartUp_Click;
 
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { ToolStripLabelSettings , stripItemStartUp, separator, stripItemOpen, stripItemExit });
-            
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { ToolStripLabelSettings, stripItemStartUp, separator, stripItemOpen, stripItemExit });
+
             stripItemStartUp.Checked = CheckStartupTask();
 
             trayIcon = new NotifyIcon()
@@ -57,7 +50,7 @@ namespace USBWatcher
         {
             trayIcon?.Dispose();
             this.Dispose();
-            Application.Exit(); 
+            Application.Exit();
         }
 
         private void stripItemStartUp_Click(object? sender, EventArgs e)
@@ -155,7 +148,7 @@ namespace USBWatcher
             if (e.Label == null || e.Label == "")
             {
                 e.CancelEdit = true;
-            } 
+            }
             else
             {
                 if (lsvDevices.SelectedItems.Count != 1)
@@ -307,5 +300,6 @@ namespace USBWatcher
                 return false;
             }
         }
+
     }
 }

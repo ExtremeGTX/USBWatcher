@@ -41,12 +41,12 @@ namespace USBWatcher.Core
                     DeviceID = devicePNPId,
                     Description = deviceDescription
                 };
-#if _0_ 
+#if _0_
                 if ((string)moBase["ClassGuid"] != GUID_DEVCLASS_USB)
                 {
                     return;
                 }
-#endif         
+#endif
                 switch (e.NewEvent.ClassPath.ClassName)
                 {
                     case "__InstanceDeletionEvent":
