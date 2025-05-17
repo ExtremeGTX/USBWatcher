@@ -213,6 +213,14 @@ namespace USBWatcher
         {
             if (e.KeyData == Keys.F2 && lsvDevices.SelectedItems.Count > 0)
             {
+                /* Make sure the user can't edit COMx part in friendlyname
+                 * COMx is automatically appended by USBWatcher SetUSBDeviceFriendlyName
+                 */
+                if (Regex.IsMatch(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$"))
+                {
+                    lsvDevices.SelectedItems[0].Text = Regex.Replace(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$", "").Trim();
+                }
+
                 lsvDevices.SelectedItems[0].BeginEdit();
             }
         }
