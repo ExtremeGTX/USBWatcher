@@ -9,8 +9,9 @@ namespace USBWatcher
     {
         private USBWatcherCore usb_watcher;
         private NotifyIcon? trayIcon;
+        private bool MinimizeOnStart = false;
 
-        public Main()
+        public Main(bool minimized)
         {
             InitializeComponent();
             InitializeTrayIcon();
@@ -18,6 +19,11 @@ namespace USBWatcher
             Settings.Load();
             usb_watcher = new USBWatcherCore(DeviceWatcher_DeviceChangeEvent);
             RefreshUSBPortsList();
+
+            if (minimized)
+            {
+                MinimizeOnStart = true;
+            }
         }
 
         private void InitializeTrayIcon()
@@ -132,7 +138,7 @@ namespace USBWatcher
 
             refresh_trayiconText();
         }
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        private void Main_FormClosing(object sender, FormClosingEventArgs e)
         {
             /* Close to systray */
             if (e.CloseReason == CloseReason.UserClosing)
@@ -140,6 +146,13 @@ namespace USBWatcher
                 trayIcon.Visible = true;
                 this.Hide();
                 e.Cancel = true;
+            }
+        }
+        private void Main_FormShown(object sender, EventArgs e)
+        {
+            if (MinimizeOnStart)
+            {
+                this.Hide();
             }
         }
 
@@ -259,7 +272,7 @@ namespace USBWatcher
                 td.Triggers.Add(new LogonTrigger());
 
                 // Create an action that runs your executable
-                td.Actions.Add(new ExecAction(exePath, null, Path.GetDirectoryName(exePath)));
+                td.Actions.Add(new ExecAction(exePath, "--minimized", Path.GetDirectoryName(exePath)));
 
                 // Register the task in the root folder
                 ts.RootFolder.RegisterTaskDefinition(taskName, td, TaskCreation.CreateOrUpdate, null, null, TaskLogonType.InteractiveToken, null);
@@ -300,6 +313,5 @@ namespace USBWatcher
                 return false;
             }
         }
-
     }
 }
