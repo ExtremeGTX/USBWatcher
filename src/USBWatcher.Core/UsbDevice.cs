@@ -24,13 +24,13 @@ namespace USBWatcher.Core
                 }
             }
         }
-        
+
         public string DeviceRegKey { get; private set; }
         public string VID { get; set; }
         public string PID { get; set; }
         public string PortName { get; set; }
-        public string? SerialNumber { get; set; }
-        public string? Manufacturer { get; set; }
+        public string SerialNumber { get; set; }
+        public string Manufacturer { get; set; }
         public bool AutoSetName { get; set; } = false;
         private string GetFriendlyName(string deviceId)
         {
@@ -62,10 +62,10 @@ namespace USBWatcher.Core
             if (value == null)
             {
                 return "";
-            } 
-            else 
+            }
+            else
             {
-                value = value.Substring(value.LastIndexOf(';')+1);
+                value = value.Substring(value.LastIndexOf(';') + 1);
             }
 
             return value;
@@ -87,15 +87,20 @@ namespace USBWatcher.Core
             string vid_pattern = @"(VID_)([0-9a-fA-F]+)";
             return ParseDeviceID(vid_pattern, deviceId);
         }
-        private string? GetFTDISerialNumber(string deviceId)
+        private string GetFTDISerialNumber(string deviceId)
         {
-            return deviceId[(deviceId.LastIndexOf('+') + 1)..]?.Split("\\", StringSplitOptions.None)[0];
+            string? serial_number = deviceId[(deviceId.LastIndexOf('+') + 1)..]?.Split("\\", StringSplitOptions.None)[0];
+            if (serial_number == null)
+            {
+                return "";
+            }
+            return serial_number;
         }
 
         public UsbDevice(string deviceId)
         {
-            string[] patterns = new string[] 
-                                { 
+            string[] patterns = new string[]
+                                {
                                     @"(USB\\VID_[0-9a-fA-F]+&PID_[0-9a-fA-F]+)",
                                     @"(FTDIBUS\\VID_[0-9a-fA-F]+\+PID_[0-9a-fA-F]+)",
                                 };
@@ -116,6 +121,10 @@ namespace USBWatcher.Core
                     if (deviceId.Contains("FTDI"))
                     {
                         SerialNumber = GetFTDISerialNumber(deviceId);
+                    }
+                    else
+                    {
+                        SerialNumber = "";
                     }
                     return;
                 }

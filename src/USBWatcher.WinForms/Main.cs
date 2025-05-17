@@ -123,11 +123,12 @@ namespace USBWatcher
                     usbdev.PortName,
                     usbdev.VID,
                     usbdev.PID,
+                    usbdev.SerialNumber,
                 };
 
-                var storedFriendlyName = Settings.GetDeviceName(usbdev.VID, usbdev.PID);
+                var storedFriendlyName = Settings.GetStoredDeviceName(usbdev.VID, usbdev.PID, usbdev.SerialNumber);
                 if (!string.IsNullOrEmpty(storedFriendlyName))
-                { 
+                {
                     usb_watcher.SetUSBDeviceFriendlyName(usbdev.PortName, storedFriendlyName);
                     DevInfo[0] = storedFriendlyName;
                 }
@@ -166,8 +167,9 @@ namespace USBWatcher
                 string? portName = lsvDevices.SelectedItems[0].SubItems[1].Text;
                 string? VID = lsvDevices.SelectedItems[0].SubItems[2].Text;
                 string? PID = lsvDevices.SelectedItems[0].SubItems[3].Text;
+                string? SN = lsvDevices.SelectedItems[0].SubItems[4].Text;
 
-                /* Make sure the user entered friendlyname doesn't contain (COMx) string 
+                /* Make sure the user entered friendlyname doesn't contain (COMx) string
                  * COMx is automatically appended by SetUSBDeviceFriendlyName
                  */
                 if (Regex.IsMatch(newFriendlyName, @"\(COM[0-9]{1,3}\)$"))
@@ -177,7 +179,7 @@ namespace USBWatcher
 
                 if (usb_watcher.SetUSBDeviceFriendlyName(portName, e.Label))
                 {
-                    Settings.SaveDeviceName(VID, PID, newFriendlyName);
+                    Settings.SaveDeviceName(VID, PID, SN, newFriendlyName);
                 }
 
                 //refresh_trayiconText();

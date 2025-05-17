@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
 namespace USBWatcher
 {
@@ -70,15 +65,23 @@ namespace USBWatcher
             }
         }
 
-        public static string? GetDeviceName(string vid, string pid)
+        public static string? GetStoredDeviceName(string vid, string pid, string? sn)
         {
             string key = $"{vid}_{pid}";
+            if (string.IsNullOrEmpty(sn) == false)
+            {
+                key += $"_{sn}";
+            }
             return Current.FriendlyNames.GetValueOrDefault(key);
         }
 
-        public static bool SaveDeviceName(string vid, string pid, string friendlyName)
+        public static bool SaveDeviceName(string vid, string pid, string? sn, string friendlyName)
         {
             string key = $"{vid}_{pid}";
+            if (string.IsNullOrEmpty(sn) == false)
+            {
+                key += $"_{sn}";
+            }
             Current.FriendlyNames[key] = friendlyName;
             return Save();
         }

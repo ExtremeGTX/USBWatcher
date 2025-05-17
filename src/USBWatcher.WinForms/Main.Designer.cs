@@ -39,6 +39,7 @@
             columnHeader2 = new ColumnHeader();
             columnHeader3 = new ColumnHeader();
             columnHeader4 = new ColumnHeader();
+            columnHeader8 = new ColumnHeader();
             menuStrip1 = new MenuStrip();
             aboutToolStripMenuItem = new ToolStripMenuItem();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
@@ -97,7 +98,7 @@
             // lsvDevices
             // 
             lsvDevices.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lsvDevices.Columns.AddRange(new ColumnHeader[] { columnHeader1, columnHeader2, columnHeader3, columnHeader4 });
+            lsvDevices.Columns.AddRange(new ColumnHeader[] { columnHeader1, columnHeader2, columnHeader3, columnHeader4, columnHeader8 });
             lsvDevices.FullRowSelect = true;
             lsvDevices.LabelEdit = true;
             lsvDevices.Location = new Point(12, 3);
@@ -112,7 +113,7 @@
             // columnHeader1
             // 
             columnHeader1.Text = "Serial Device Name";
-            columnHeader1.Width = 230;
+            columnHeader1.Width = 180;
             // 
             // columnHeader2
             // 
@@ -125,6 +126,10 @@
             // columnHeader4
             // 
             columnHeader4.Text = "PID";
+            // 
+            // columnHeader8
+            // 
+            columnHeader8.Text = "SN";
             // 
             // menuStrip1
             // 
@@ -188,5 +193,6 @@
         private MenuStrip menuStrip1;
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripMenuItem clearLogsToolStripMenuItem;
+        private ColumnHeader columnHeader8;
     }
 }
