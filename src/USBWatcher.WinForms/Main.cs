@@ -89,6 +89,9 @@ namespace USBWatcher
 
                 lsvEvents.Items.Add(lvi);
 
+                /* Scroll to bottom */
+                lsvEvents.EnsureVisible(lsvEvents.Items.Count - 1);
+
                 RefreshUSBPortsList();
             });
         }
