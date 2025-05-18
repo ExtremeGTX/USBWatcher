@@ -20,16 +20,12 @@
     <a href="https://github.com/ExtremeGTX/USBWatcher"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/ExtremeGTX/USBWatcher">View Demo</a>
-    ·
     <a href="https://github.com/ExtremeGTX/USBWatcher/issues">Report Bug</a>
     ·
     <a href="https://github.com/ExtremeGTX/USBWatcher/issues">Request Feature</a>
   </p>
 </div>
 
-
-<!-- ABOUT THE PROJECT -->
 ## About The Project
 
 USB Watcher is a simple tool mainly to rename USB Serial ports on Windows
@@ -40,53 +36,39 @@ USB Watcher is a simple tool mainly to rename USB Serial ports on Windows
 - How it looks in other Apps ([pyserial-terminal](https://pypi.org/project/pyserial/)):
 ![pyserial-terminal](docs/example1.png)
 
-- Systray view:
-
-  ![Systray view](docs/systray.png)
-
 
 ## Features
 - List Serial Ports
 - Rename Serial Ports
-- Show list of Serial ports as systray tooltip
 - Listen to USB Insert/Remove Events
+- [v1.5] **Automatically set user-defined Device names even if the device USB/COM port changed!**
+- [v1.5] Highlight Device events based on Event type
+- [v1.5] Show FTDI Devices serial number
+- [v1.5] Auto start on User login
 
-### Built With
+### Installation
+<div>
+  <img src="https://img.icons8.com/fluency/48/download-from-cloud.png" alt="download" width="24" height="24" style="vertical-align: middle;">
+  <a href="https://github.com/extremegtx/USBWatcher/releases/latest/" style="vertical-align: middle;">Download Latest Release</a>
+</div>
+
+## Usage
+
+Just run `USBWatcher.exe` no installation is needed.
+
+> [!NOTE]
+> Administrator privilege needed to access devices registry paths.
+
+## Built With
 
 * [![.NET]][.NET-url]
 * [![Visual Studio]][VS-url]
 * [![Windows]][Windows-url]
 
 
-<!-- GETTING STARTED -->
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-- [.NET 6.0 Desktop Runtime](https://download.visualstudio.microsoft.com/download/pr/a6e878eb-d1da-40cb-8b6a-7f5b9390f09c/e4431ce2aa28b6c9956db672209be500/windowsdesktop-runtime-6.0.10-win-x64.exe)
-
-### Installation
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Run the program as Administrator and you are good to go.
-
-**Note:** Administrator privilege needed to access devices registry paths.
-
-
-<!-- LICENSE -->
 ## License
-
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-
-<!-- CONTACT -->
 ## Contact
 
 Mohamed ElShahawi - [@extremegtx](https://twitter.com/extremegtx)
@@ -94,7 +76,6 @@ Mohamed ElShahawi - [@extremegtx](https://twitter.com/extremegtx)
 Project Link: [https://github.com/ExtremeGTX/USBWatcher](https://github.com/ExtremeGTX/USBWatcher)
 
 
-<!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
 * [Best-README-Template](https://github.com/othneildrew/Best-README-Template/)
