@@ -19,7 +19,6 @@ namespace USBWatcher.Core
 
         List<UsbDevice> UsbDevicesList = new List<UsbDevice>();
 
-        public event EventHandler<DeviceChangeEventArgs>? DeviceChangeEvent;
         public USBWatcherCore(EventHandler<DeviceChangeEventArgs>? eventHandler)
         {
             DeviceWatcher deviceWatcher = new DeviceWatcher();

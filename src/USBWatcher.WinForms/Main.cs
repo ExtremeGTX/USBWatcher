@@ -95,7 +95,10 @@ namespace USBWatcher
             /* Close to systray */
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                trayIcon.Visible = true;
+                if (trayIcon != null)
+                {
+                    trayIcon.Visible = true;
+                }
                 this.Hide();
                 e.Cancel = true;
             }
