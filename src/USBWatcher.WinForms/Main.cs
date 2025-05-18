@@ -27,52 +27,6 @@ namespace USBWatcher
             }
         }
 
-        private void InitializeTrayIcon()
-        {
-            ContextMenuStrip contextMenuStrip = new ContextMenuStrip();
-            ToolStripLabel ToolStripLabelSettings = new ToolStripLabel("&Settings") { Enabled = false };
-            ToolStripMenuItem stripItemStartUp = new ToolStripMenuItem("&Start USBWatcher with Windows") { CheckOnClick = true };
-            ToolStripSeparator separator = new ToolStripSeparator();
-            ToolStripItem stripItemOpen = new ToolStripMenuItem("&Open");
-            ToolStripItem stripItemExit = new ToolStripMenuItem("E&xit");
-
-            stripItemOpen.Click += TrayIcon_Click;
-            stripItemExit.Click += stripItemExit_Click;
-            stripItemStartUp.Click += stripItemStartUp_Click;
-
-            contextMenuStrip.Items.AddRange(new ToolStripItem[] { ToolStripLabelSettings, stripItemStartUp, separator, stripItemOpen, stripItemExit });
-
-            stripItemStartUp.Checked = CheckStartupTask();
-
-            trayIcon = new NotifyIcon()
-            {
-                Icon = this.Icon,
-                Visible = true,
-            };
-            trayIcon.Click += TrayIcon_Click;
-            trayIcon.ContextMenuStrip = contextMenuStrip;
-        }
-
-        private void stripItemExit_Click(object? sender, EventArgs e)
-        {
-            trayIcon?.Dispose();
-            this.Dispose();
-            Application.Exit();
-        }
-
-        private void stripItemStartUp_Click(object? sender, EventArgs e)
-        {
-            ToolStripMenuItem stripItemStartUp = (sender as ToolStripMenuItem)!;
-            if (stripItemStartUp.Checked)
-            {
-                CreateStartupTask();
-            }
-            else
-            {
-                RemoveStartupTask();
-            }
-        }
-
         private void DeviceWatcher_DeviceChangeEvent(object? sender, DeviceChangeEventArgs e)
         {
             this.Invoke(delegate
@@ -95,28 +49,6 @@ namespace USBWatcher
 
                 RefreshUSBPortsList();
             });
-        }
-
-        private void TrayIcon_Click(object? sender, EventArgs e)
-        {
-            /* Act only on left click */
-            if (e is MouseEventArgs mouseEvent && mouseEvent.Button != MouseButtons.Left)
-            {
-                return;
-            }
-
-            /* show/hide main window from systray icon */
-            switch (this.Visible)
-            {
-                case true:
-                    this.Hide();
-                    break;
-                case false:
-                    this.SetDesktopLocation(MousePosition.X - this.Width / 2, MousePosition.Y - this.Height - 20);
-                    this.Show();
-                    this.Activate();
-                    break;
-            }
         }
 
         void RefreshUSBPortsList()
@@ -148,6 +80,16 @@ namespace USBWatcher
 
             refresh_trayiconText();
         }
+
+        #region "Form events"
+        private void Main_FormShown(object sender, EventArgs e)
+        {
+            if (MinimizeOnStart)
+            {
+                this.Hide();
+            }
+        }
+
         private void Main_FormClosing(object sender, FormClosingEventArgs e)
         {
             /* Close to systray */
@@ -158,48 +100,33 @@ namespace USBWatcher
                 e.Cancel = true;
             }
         }
-        private void Main_FormShown(object sender, EventArgs e)
+        #endregion
+
+        #region "TrayIcon"
+        private void InitializeTrayIcon()
         {
-            if (MinimizeOnStart)
+            ContextMenuStrip contextMenuStrip = new ContextMenuStrip();
+            ToolStripLabel ToolStripLabelSettings = new ToolStripLabel("&Settings") { Enabled = false };
+            ToolStripMenuItem stripItemStartUp = new ToolStripMenuItem("&Start USBWatcher with Windows") { CheckOnClick = true };
+            ToolStripSeparator separator = new ToolStripSeparator();
+            ToolStripItem stripItemOpen = new ToolStripMenuItem("&Show/Hide");
+            ToolStripItem stripItemExit = new ToolStripMenuItem("E&xit");
+
+            stripItemOpen.Click += TrayIcon_Click;
+            stripItemExit.Click += stripItemExit_Click;
+            stripItemStartUp.Click += stripItemStartUp_Click;
+
+            contextMenuStrip.Items.AddRange(new ToolStripItem[] { ToolStripLabelSettings, stripItemStartUp, separator, stripItemOpen, stripItemExit });
+
+            stripItemStartUp.Checked = CheckStartupTaskStatus();
+
+            trayIcon = new NotifyIcon()
             {
-                this.Hide();
-            }
-        }
-
-        private void lsvDevices_AfterLabelEdit(object sender, LabelEditEventArgs e)
-        {
-            if (e.Label == null || e.Label == "")
-            {
-                e.CancelEdit = true;
-            }
-            else
-            {
-                if (lsvDevices.SelectedItems.Count != 1)
-                {
-                    return;
-                }
-
-                string newFriendlyName = e.Label;
-                string? portName = lsvDevices.SelectedItems[0].SubItems[1].Text;
-                string? VID = lsvDevices.SelectedItems[0].SubItems[2].Text;
-                string? PID = lsvDevices.SelectedItems[0].SubItems[3].Text;
-                string? SN = lsvDevices.SelectedItems[0].SubItems[4].Text;
-
-                /* Make sure the user entered friendlyname doesn't contain (COMx) string
-                 * COMx is automatically appended by SetUSBDeviceFriendlyName
-                 */
-                if (Regex.IsMatch(newFriendlyName, @"\(COM[0-9]{1,3}\)$"))
-                {
-                    newFriendlyName = Regex.Replace(newFriendlyName, @"\(COM[0-9]{1,3}\)$", "").Trim();
-                }
-
-                if (usb_watcher.SetUSBDeviceFriendlyName(portName, e.Label))
-                {
-                    Settings.SaveDeviceName(VID, PID, SN, newFriendlyName);
-                }
-
-                //refresh_trayiconText();
-            }
+                Icon = this.Icon,
+                Visible = true,
+            };
+            trayIcon.Click += TrayIcon_Click;
+            trayIcon.ContextMenuStrip = contextMenuStrip;
         }
 
         private void refresh_trayiconText()
@@ -222,49 +149,52 @@ namespace USBWatcher
             //t.GetField("text", hidden).SetValue(trayIcon, myText);
             //if ((bool)t.GetField("added", hidden).GetValue(trayIcon))
             //    t.GetMethod("UpdateIcon", hidden).Invoke(trayIcon, new object[] { true });
-
-
         }
-        private void lsvDevices_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyData == Keys.F2 && lsvDevices.SelectedItems.Count > 0)
-            {
-                /* Make sure the user can't edit COMx part in friendlyname
-                 * COMx is automatically appended by USBWatcher SetUSBDeviceFriendlyName
-                 */
-                if (Regex.IsMatch(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$"))
-                {
-                    lsvDevices.SelectedItems[0].Text = Regex.Replace(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$", "").Trim();
-                }
 
-                lsvDevices.SelectedItems[0].BeginEdit();
+        private void TrayIcon_Click(object? sender, EventArgs e)
+        {
+            /* Act only on left click */
+            if (e is MouseEventArgs mouseEvent && mouseEvent.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
+            /* show/hide main window from systray icon */
+            switch (this.Visible)
+            {
+                case true:
+                    this.Hide();
+                    break;
+                case false:
+                    this.SetDesktopLocation(MousePosition.X - this.Width / 2, MousePosition.Y - this.Height - 20);
+                    this.Show();
+                    this.Activate();
+                    break;
             }
         }
-        #region "Notes"
-        /// Notes:
-        /// Check: https://docs.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
-        /// SELECT * FROM Win32_PnPEntity WHERE ClassGuid="{4d36e978-e325-11ce-bfc1-08002be10318}"   for COM Ports
-        /// Modify and save names straight in the register @ HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\<VID_xxxx&PID_xxxx>\<instanceID> "FriendlyName"
+
+        private void stripItemExit_Click(object? sender, EventArgs e)
+        {
+            trayIcon?.Dispose();
+            this.Dispose();
+            Application.Exit();
+        }
+
+        private void stripItemStartUp_Click(object? sender, EventArgs e)
+        {
+            ToolStripMenuItem stripItemStartUp = (sender as ToolStripMenuItem)!;
+            if (stripItemStartUp.Checked)
+            {
+                CreateStartupTask();
+            }
+            else
+            {
+                RemoveStartupTask();
+            }
+        }
         #endregion
 
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            Version? version = Assembly.GetExecutingAssembly().GetName().Version;
-            string versionString = version != null ?
-                $"v{version.Major}.{version.Minor}.{version.Build}" : "";
-
-            MessageBox.Show(
-                $"USB Watcher {versionString}\nby Mohamed ElShahawi\nhttps://github.com/ExtremeGTX/USBWatcher",
-                "About USB Watcher",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-        }
-
-        private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            lsvEvents.Items.Clear();
-        }
-
+        #region "Windows Startup task"
         public void CreateStartupTask()
         {
             string taskName = "USBWatcher_AutoStart";
@@ -308,7 +238,7 @@ namespace USBWatcher
                 }
             }
         }
-        public bool CheckStartupTask()
+        public bool CheckStartupTaskStatus()
         {
             string taskName = "USBWatcher_AutoStart";
 
@@ -323,7 +253,9 @@ namespace USBWatcher
                 return false;
             }
         }
+        #endregion
 
+        #region "ToolStrip menu"
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             /* Open settings file in notepad */
@@ -338,6 +270,77 @@ namespace USBWatcher
             }
         }
 
+        private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            lsvEvents.Items.Clear();
+        }
+
+        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+            string versionString = version != null ?
+                $"v{version.Major}.{version.Minor}.{version.Build}" : "";
+
+            MessageBox.Show(
+                $"USB Watcher {versionString}\nby Mohamed ElShahawi\nhttps://github.com/ExtremeGTX/USBWatcher",
+                "About USB Watcher",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        #endregion
+
+        #region "Devices list"
+        private void lsvDevices_AfterLabelEdit(object sender, LabelEditEventArgs e)
+        {
+            if (e.Label == null || e.Label == "")
+            {
+                e.CancelEdit = true;
+            }
+            else
+            {
+                if (lsvDevices.SelectedItems.Count != 1)
+                {
+                    return;
+                }
+
+                string newFriendlyName = e.Label;
+                string? portName = lsvDevices.SelectedItems[0].SubItems[1].Text;
+                string? VID = lsvDevices.SelectedItems[0].SubItems[2].Text;
+                string? PID = lsvDevices.SelectedItems[0].SubItems[3].Text;
+                string? SN = lsvDevices.SelectedItems[0].SubItems[4].Text;
+
+                /* Make sure the user entered friendlyname doesn't contain (COMx) string
+                 * COMx is automatically appended by SetUSBDeviceFriendlyName
+                 */
+                if (Regex.IsMatch(newFriendlyName, @"\(COM[0-9]{1,3}\)$"))
+                {
+                    newFriendlyName = Regex.Replace(newFriendlyName, @"\(COM[0-9]{1,3}\)$", "").Trim();
+                }
+
+                if (usb_watcher.SetUSBDeviceFriendlyName(portName, e.Label))
+                {
+                    Settings.SaveDeviceName(VID, PID, SN, newFriendlyName);
+                }
+
+                //refresh_trayiconText();
+            }
+        }
+
+        private void lsvDevices_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyData == Keys.F2 && lsvDevices.SelectedItems.Count > 0)
+            {
+                /* Make sure the user can't edit COMx part in friendlyname
+                 * COMx is automatically appended by USBWatcher SetUSBDeviceFriendlyName
+                 */
+                if (Regex.IsMatch(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$"))
+                {
+                    lsvDevices.SelectedItems[0].Text = Regex.Replace(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$", "").Trim();
+                }
+
+                lsvDevices.SelectedItems[0].BeginEdit();
+            }
+        }
         // Define static locals for tracking sort state
         int lsvDevices_sortColumn = -1;
         SortOrder lsvDevices_sortOrder = SortOrder.None;
@@ -403,5 +406,13 @@ namespace USBWatcher
                 lsvDevices.EndUpdate();
             }
         }
+        #endregion
+
+        #region "Notes"
+        /// Notes:
+        /// Check: https://docs.microsoft.com/en-us/windows-hardware/drivers/install/system-defined-device-setup-classes-available-to-vendors
+        /// SELECT * FROM Win32_PnPEntity WHERE ClassGuid="{4d36e978-e325-11ce-bfc1-08002be10318}"   for COM Ports
+        /// Modify and save names straight in the register @ HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\<VID_xxxx&PID_xxxx>\<instanceID> "FriendlyName"
+        #endregion
     }
 }
