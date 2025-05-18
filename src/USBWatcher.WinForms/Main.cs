@@ -341,6 +341,7 @@ namespace USBWatcher
                 lsvDevices.SelectedItems[0].BeginEdit();
             }
         }
+
         // Define static locals for tracking sort state
         int lsvDevices_sortColumn = -1;
         SortOrder lsvDevices_sortOrder = SortOrder.None;
@@ -414,5 +415,6 @@ namespace USBWatcher
         /// SELECT * FROM Win32_PnPEntity WHERE ClassGuid="{4d36e978-e325-11ce-bfc1-08002be10318}"   for COM Ports
         /// Modify and save names straight in the register @ HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\<VID_xxxx&PID_xxxx>\<instanceID> "FriendlyName"
         #endregion
+
     }
 }
