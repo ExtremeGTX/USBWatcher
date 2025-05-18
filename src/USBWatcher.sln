@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher", "USBWatcher.csproj", "{37BC023E-760E-4411-94CB-F1A9A98753F4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher", ".\USBWatcher.WinForms\USBWatcher.csproj", "{37BC023E-760E-4411-94CB-F1A9A98753F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher.Core", ".\USBWatcher.Core\USBWatcher.Core.csproj", "{997E4177-2230-4A21-882B-73F29B0C7E4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{37BC023E-760E-4411-94CB-F1A9A98753F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{37BC023E-760E-4411-94CB-F1A9A98753F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{37BC023E-760E-4411-94CB-F1A9A98753F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

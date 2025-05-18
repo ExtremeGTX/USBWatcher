@@ -5,7 +5,7 @@ name: Create Release
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+'
 
 env:
   RELEASE_NUMBER: ${{github.ref_name}}
@@ -47,7 +47,7 @@ jobs:
 
     - name: Cleanup output dir
       run: |
-        rm .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.json, .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.pdb
+        rm .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.pdb
 
     - name: Create zip archieve
       uses: thedoctor0/zip-release@main
