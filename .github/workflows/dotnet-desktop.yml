@@ -47,13 +47,13 @@ jobs:
 
     - name: Cleanup output dir
       run: |
-        rm .\src\bin\${{ matrix.configuration }}\net6.0-windows\*.pdb
+        rm .\src\bin\${{ matrix.configuration }}\net8.0-windows7.0\*.pdb
 
     - name: Create zip archieve
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        path: .\src\bin\${{ matrix.configuration }}\net6.0-windows\*
+        path: .\src\bin\${{ matrix.configuration }}\net8.0-windows7.0\*
         filename: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
