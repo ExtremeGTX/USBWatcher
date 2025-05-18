@@ -6,6 +6,8 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+'
+  pull_request:
+    branches: [ "main" ]
 
 env:
   RELEASE_NUMBER: ${{github.ref_name}}
@@ -30,7 +32,7 @@ jobs:
     - name: Install .NET Framework
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
 
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
@@ -47,13 +49,13 @@ jobs:
 
     - name: Cleanup output dir
       run: |
-        rm .\src\bin\${{ matrix.configuration }}\net8.0-windows7.0\*.pdb
+        rm .\src\USBWatcher.WinForms\bin\${{ matrix.configuration }}\net8.0-windows7.0\*.pdb
 
     - name: Create zip archieve
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        path: .\src\bin\${{ matrix.configuration }}\net8.0-windows7.0\*
+        path: .\src\USBWatcher.WinForms\bin\${{ matrix.configuration }}\net8.0-windows7.0\*
         filename: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
@@ -61,7 +63,9 @@ jobs:
       run: |
           Get-ChildItem -Recurse
 
+    # Release steps only run on tag push
     - name: Upload Release
+      if: startsWith(github.ref, 'refs/tags/')
       uses: ncipollo/release-action@v1.11.1
       with:
         tag: ${{ env.RELEASE_NUMBER }}
