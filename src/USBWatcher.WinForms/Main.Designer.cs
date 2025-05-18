@@ -81,6 +81,7 @@
             lsvDevices.TabIndex = 5;
             lsvDevices.UseCompatibleStateImageBehavior = false;
             lsvDevices.View = View.Details;
+            lsvDevices.ColumnClick += lsvDevices_ColumnClick;
             // 
             // columnHeader1
             // 

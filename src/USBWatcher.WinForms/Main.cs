@@ -337,5 +337,71 @@ namespace USBWatcher
                 MessageBox.Show($"Settings file not found: {settingsPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        // Define static locals for tracking sort state
+        int lsvDevices_sortColumn = -1;
+        SortOrder lsvDevices_sortOrder = SortOrder.None;
+        private void lsvDevices_ColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            // Only allow sorting for columns 0 and 1 (FriendlyName and PortName)
+            if (e.Column > 1)
+                return;
+
+            // Determine new sort order
+            if (lsvDevices_sortColumn == e.Column)
+            {
+                // Same column as last sort; toggle the sort order
+                lsvDevices_sortOrder = lsvDevices_sortOrder == SortOrder.Ascending ? SortOrder.Descending : SortOrder.Ascending;
+            }
+            else
+            {
+                // New column; sort ascending by default
+                lsvDevices_sortColumn = e.Column;
+                lsvDevices_sortOrder = SortOrder.Ascending;
+            }
+
+            // Perform the sort
+            lsvDevices.BeginUpdate();
+            try
+            {
+                var items = lsvDevices.Items.Cast<ListViewItem>().ToList();
+                items.Sort((x, y) =>
+                {
+                    string textX = lsvDevices_sortColumn == 0 ? x.Text : x.SubItems[lsvDevices_sortColumn].Text;
+                    string textY = lsvDevices_sortColumn == 0 ? y.Text : y.SubItems[lsvDevices_sortColumn].Text;
+
+                    int result;
+                    if (lsvDevices_sortColumn == 1) // PortName column - sort COM ports numerically
+                    {
+                        var matchX = Regex.Match(textX, @"COM(\d+)");
+                        var matchY = Regex.Match(textY, @"COM(\d+)");
+
+                        if (matchX.Success && matchY.Success)
+                        {
+                            int numX = int.Parse(matchX.Groups[1].Value);
+                            int numY = int.Parse(matchY.Groups[1].Value);
+                            result = numX.CompareTo(numY);
+                        }
+                        else
+                        {
+                            result = string.Compare(textX, textY, StringComparison.OrdinalIgnoreCase);
+                        }
+                    }
+                    else // FriendlyName column - simple string comparison
+                    {
+                        result = string.Compare(textX, textY, StringComparison.OrdinalIgnoreCase);
+                    }
+
+                    return lsvDevices_sortOrder == SortOrder.Ascending ? result : -result;
+                });
+
+                lsvDevices.Items.Clear();
+                lsvDevices.Items.AddRange(items.ToArray());
+            }
+            finally
+            {
+                lsvDevices.EndUpdate();
+            }
+        }
     }
 }
