@@ -1,4 +1,5 @@
 using Microsoft.Win32.TaskScheduler;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using USBWatcher.Core;
@@ -320,6 +321,20 @@ namespace USBWatcher
                     return true;
                 }
                 return false;
+            }
+        }
+
+        private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            /* Open settings file in notepad */
+            string settingsPath = Settings.GetSettingsPath();
+            if (File.Exists(settingsPath))
+            {
+                Process.Start(new ProcessStartInfo("notepad.exe", settingsPath) { UseShellExecute = true });
+            }
+            else
+            {
+                MessageBox.Show($"Settings file not found: {settingsPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

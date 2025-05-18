@@ -30,10 +30,6 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
             splitContainer1 = new SplitContainer();
-            lsvEvents = new ListView();
-            columnHeader5 = new ColumnHeader();
-            columnHeader6 = new ColumnHeader();
-            columnHeader7 = new ColumnHeader();
             lsvDevices = new ListView();
             columnHeader1 = new ColumnHeader();
             columnHeader2 = new ColumnHeader();
@@ -45,8 +41,9 @@
             columnHeader6 = new ColumnHeader();
             columnHeader7 = new ColumnHeader();
             menuStrip1 = new MenuStrip();
-            aboutToolStripMenuItem = new ToolStripMenuItem();
+            settingsToolStripMenuItem = new ToolStripMenuItem();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
+            aboutToolStripMenuItem = new ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -72,33 +69,6 @@
             splitContainer1.SplitterDistance = 150;
             splitContainer1.TabIndex = 0;
             // 
-            // lsvEvents
-            // 
-            lsvEvents.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lsvEvents.Columns.AddRange(new ColumnHeader[] { columnHeader5, columnHeader6, columnHeader7 });
-            lsvEvents.FullRowSelect = true;
-            lsvEvents.Location = new Point(12, 3);
-            lsvEvents.Name = "lsvEvents";
-            lsvEvents.Size = new Size(424, 103);
-            lsvEvents.TabIndex = 4;
-            lsvEvents.UseCompatibleStateImageBehavior = false;
-            lsvEvents.View = View.Details;
-            // 
-            // columnHeader5
-            // 
-            columnHeader5.Text = "Time";
-            columnHeader5.Width = 100;
-            // 
-            // columnHeader6
-            // 
-            columnHeader6.Text = "Device Name";
-            columnHeader6.Width = 210;
-            // 
-            // columnHeader7
-            // 
-            columnHeader7.Text = "Event";
-            columnHeader7.Width = 80;
-            // 
             // lsvDevices
             // 
             lsvDevices.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -111,8 +81,6 @@
             lsvDevices.TabIndex = 5;
             lsvDevices.UseCompatibleStateImageBehavior = false;
             lsvDevices.View = View.Details;
-            lsvDevices.AfterLabelEdit += lsvDevices_AfterLabelEdit;
-            lsvDevices.KeyDown += lsvDevices_KeyDown;
             // 
             // columnHeader1
             // 
@@ -164,19 +132,19 @@
             // 
             // menuStrip1
             // 
-            menuStrip1.Items.AddRange(new ToolStripItem[] { aboutToolStripMenuItem, clearLogsToolStripMenuItem });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { settingsToolStripMenuItem, clearLogsToolStripMenuItem, aboutToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
             menuStrip1.Size = new Size(448, 24);
             menuStrip1.TabIndex = 1;
             menuStrip1.Text = "menuStrip1";
             // 
-            // aboutToolStripMenuItem
+            // settingsToolStripMenuItem
             // 
-            aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
-            aboutToolStripMenuItem.Size = new Size(52, 20);
-            aboutToolStripMenuItem.Text = "About";
-            aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
+            settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
+            settingsToolStripMenuItem.Size = new Size(61, 20);
+            settingsToolStripMenuItem.Text = "Settings";
+            settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
             // 
             // clearLogsToolStripMenuItem
             // 
@@ -184,6 +152,13 @@
             clearLogsToolStripMenuItem.Size = new Size(71, 20);
             clearLogsToolStripMenuItem.Text = "Clear logs";
             clearLogsToolStripMenuItem.Click += clearLogsToolStripMenuItem_Click;
+            // 
+            // aboutToolStripMenuItem
+            // 
+            aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
+            aboutToolStripMenuItem.Size = new Size(52, 20);
+            aboutToolStripMenuItem.Text = "About";
+            aboutToolStripMenuItem.Click += aboutToolStripMenuItem_Click;
             // 
             // Main
             // 
@@ -217,14 +192,15 @@
         private ColumnHeader columnHeader5;
         private ColumnHeader columnHeader6;
         private ColumnHeader columnHeader7;
+        private MenuStrip menuStrip1;
+        private ToolStripMenuItem aboutToolStripMenuItem;
+        private ToolStripMenuItem clearLogsToolStripMenuItem;
         private ListView lsvDevices;
         private ColumnHeader columnHeader1;
         private ColumnHeader columnHeader2;
         private ColumnHeader columnHeader3;
         private ColumnHeader columnHeader4;
-        private MenuStrip menuStrip1;
-        private ToolStripMenuItem aboutToolStripMenuItem;
-        private ToolStripMenuItem clearLogsToolStripMenuItem;
         private ColumnHeader columnHeader8;
+        private ToolStripMenuItem settingsToolStripMenuItem;
     }
 }

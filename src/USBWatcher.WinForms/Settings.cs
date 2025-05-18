@@ -85,5 +85,10 @@ namespace USBWatcher
             Current.FriendlyNames[key] = friendlyName;
             return Save();
         }
+
+        public static string GetSettingsPath()
+        {
+            return SettingsPath;
+        }
     }
 }
