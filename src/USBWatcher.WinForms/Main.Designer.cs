@@ -81,7 +81,9 @@
             lsvDevices.TabIndex = 5;
             lsvDevices.UseCompatibleStateImageBehavior = false;
             lsvDevices.View = View.Details;
+            lsvDevices.AfterLabelEdit += lsvDevices_AfterLabelEdit;
             lsvDevices.ColumnClick += lsvDevices_ColumnClick;
+            lsvDevices.KeyDown += lsvDevices_KeyDown;
             // 
             // columnHeader1
             // 
@@ -124,7 +126,7 @@
             // columnHeader6
             // 
             columnHeader6.Text = "Device Name";
-            columnHeader6.Width = 210;
+            columnHeader6.Width = 240;
             // 
             // columnHeader7
             // 
