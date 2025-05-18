@@ -40,6 +40,10 @@
             columnHeader3 = new ColumnHeader();
             columnHeader4 = new ColumnHeader();
             columnHeader8 = new ColumnHeader();
+            lsvEvents = new ListView();
+            columnHeader5 = new ColumnHeader();
+            columnHeader6 = new ColumnHeader();
+            columnHeader7 = new ColumnHeader();
             menuStrip1 = new MenuStrip();
             aboutToolStripMenuItem = new ToolStripMenuItem();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
@@ -59,13 +63,13 @@
             // 
             // splitContainer1.Panel1
             // 
-            splitContainer1.Panel1.Controls.Add(lsvEvents);
+            splitContainer1.Panel1.Controls.Add(lsvDevices);
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(lsvDevices);
+            splitContainer1.Panel2.Controls.Add(lsvEvents);
             splitContainer1.Size = new Size(448, 434);
-            splitContainer1.SplitterDistance = 109;
+            splitContainer1.SplitterDistance = 150;
             splitContainer1.TabIndex = 0;
             // 
             // lsvEvents
@@ -103,8 +107,8 @@
             lsvDevices.LabelEdit = true;
             lsvDevices.Location = new Point(12, 3);
             lsvDevices.Name = "lsvDevices";
-            lsvDevices.Size = new Size(424, 306);
-            lsvDevices.TabIndex = 4;
+            lsvDevices.Size = new Size(424, 144);
+            lsvDevices.TabIndex = 5;
             lsvDevices.UseCompatibleStateImageBehavior = false;
             lsvDevices.View = View.Details;
             lsvDevices.AfterLabelEdit += lsvDevices_AfterLabelEdit;
@@ -130,6 +134,33 @@
             // columnHeader8
             // 
             columnHeader8.Text = "SN";
+            // 
+            // lsvEvents
+            // 
+            lsvEvents.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            lsvEvents.Columns.AddRange(new ColumnHeader[] { columnHeader5, columnHeader6, columnHeader7 });
+            lsvEvents.FullRowSelect = true;
+            lsvEvents.Location = new Point(12, 3);
+            lsvEvents.Name = "lsvEvents";
+            lsvEvents.Size = new Size(424, 265);
+            lsvEvents.TabIndex = 4;
+            lsvEvents.UseCompatibleStateImageBehavior = false;
+            lsvEvents.View = View.Details;
+            // 
+            // columnHeader5
+            // 
+            columnHeader5.Text = "Time";
+            columnHeader5.Width = 100;
+            // 
+            // columnHeader6
+            // 
+            columnHeader6.Text = "Device Name";
+            columnHeader6.Width = 210;
+            // 
+            // columnHeader7
+            // 
+            columnHeader7.Text = "Event";
+            columnHeader7.Width = 80;
             // 
             // menuStrip1
             // 
