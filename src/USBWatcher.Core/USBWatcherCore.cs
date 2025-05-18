@@ -8,8 +8,8 @@ namespace USBWatcher.Core
         string VID,
         string PID,
         string PortName,
-        string? SerialNumber,
-        string? Manufacturer
+        string SerialNumber,
+        string Manufacturer
     );
 
     public class USBWatcherCore
@@ -37,19 +37,11 @@ namespace USBWatcher.Core
                 for (int i = 0; i < ports.Count; i++)
                 {
                     string? DevID = ports[i]["DeviceID"].ToString();
-                    string? strManufacturer = ports[i]["Manufacturer"].ToString();
                     if (DevID == null)
                         continue;
 
                     UsbDevice usbdev = new UsbDevice(DevID);
                     UsbDevicesList.Add(usbdev);
-                    string?[] DevInfo = new string?[]
-                    {
-                        usbdev.FriendlyName,
-                        usbdev.PortName,
-                        usbdev.VID,
-                        usbdev.PID,
-                    };
                 }
             }
         }
