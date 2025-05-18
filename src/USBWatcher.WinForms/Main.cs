@@ -98,6 +98,12 @@ namespace USBWatcher
 
         private void TrayIcon_Click(object? sender, EventArgs e)
         {
+            /* Act only on left click */
+            if (e is MouseEventArgs mouseEvent && mouseEvent.Button != MouseButtons.Left)
+            {
+                return;
+            }
+
             /* show/hide main window from systray icon */
             switch (this.Visible)
             {
