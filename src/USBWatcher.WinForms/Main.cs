@@ -58,16 +58,17 @@ namespace USBWatcher
 
             foreach (UsbDeviceRecord usbdev in UsbDevicesList)
             {
+                string subID = string.IsNullOrEmpty(usbdev.SerialNumber) ? usbdev.MI : usbdev.SerialNumber;
                 string[] DevInfo = new string[]
                 {
                     usbdev.FriendlyName,
                     usbdev.PortName,
                     usbdev.VID,
                     usbdev.PID,
-                    usbdev.SerialNumber,
+                    subID
                 };
 
-                var storedFriendlyName = Settings.GetStoredDeviceName(usbdev.VID, usbdev.PID, usbdev.SerialNumber);
+                var storedFriendlyName = Settings.GetStoredDeviceName(usbdev.VID, usbdev.PID, subID);
                 if (!string.IsNullOrEmpty(storedFriendlyName))
                 {
                     usb_watcher.SetUSBDeviceFriendlyName(usbdev.PortName, storedFriendlyName);
