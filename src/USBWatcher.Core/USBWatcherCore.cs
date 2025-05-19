@@ -9,7 +9,8 @@ namespace USBWatcher.Core
         string PID,
         string PortName,
         string SerialNumber,
-        string Manufacturer
+        string Manufacturer,
+        string MI
     );
 
     public class USBWatcherCore
@@ -59,7 +60,8 @@ namespace USBWatcher.Core
                 d.PID,
                 d.PortName,
                 d.SerialNumber,
-                d.Manufacturer
+                d.Manufacturer,
+                d.MI
             )).ToList().AsReadOnly();
         }
 

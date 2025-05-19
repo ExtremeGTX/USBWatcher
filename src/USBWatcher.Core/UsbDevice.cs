@@ -31,7 +31,7 @@ namespace USBWatcher.Core
         public string PortName { get; set; }
         public string SerialNumber { get; set; }
         public string Manufacturer { get; set; }
-        public bool AutoSetName { get; set; } = false;
+        public string MI { get; set; }
         private string GetFriendlyName(string deviceId)
         {
             string RegKey = DeviceRegKey;
@@ -97,6 +97,11 @@ namespace USBWatcher.Core
             return serial_number;
         }
 
+        private string GetMI(string deviceId)
+        {
+            return ParseDeviceID(@"(MI_)(\d{2})", deviceId);
+        }
+
         public UsbDevice(string deviceId)
         {
             string[] patterns = new string[]
@@ -116,6 +121,7 @@ namespace USBWatcher.Core
                     _friendlyName = GetFriendlyName(deviceId);
                     VID = GetVID(deviceId);
                     PID = GetPID(deviceId);
+                    MI = GetMI(deviceId);
                     Manufacturer = GetManufacturer(deviceId);
                     /* Extract serial number from device ID in case of FTDI Devices */
                     if (deviceId.Contains("FTDI"))
