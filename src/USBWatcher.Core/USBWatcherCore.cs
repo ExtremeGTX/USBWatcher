@@ -13,16 +13,20 @@ namespace USBWatcher.Core
         string MI
     );
 
-    public class USBWatcherCore
+    public sealed class USBWatcherCore : IDisposable
     {
-        const string GUID_DEVCLASS_USB = @"{4d36e978-e325-11ce-bfc1-08002be10318}";
-        const string WMI_QUERY = $"SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{GUID_DEVCLASS_USB}'";
+        const string GUID_DEVCLASS_PORTS = @"{4d36e978-e325-11ce-bfc1-08002be10318}";
+        const string WMI_QUERY = $"SELECT * FROM Win32_PnPEntity WHERE ClassGuid='{GUID_DEVCLASS_PORTS}'";
 
-        List<UsbDevice> UsbDevicesList = new List<UsbDevice>();
+        readonly List<UsbDevice> UsbDevicesList = new List<UsbDevice>();
+        readonly DeviceWatcher deviceWatcher;
+        readonly object devicesLock = new();
 
-        public USBWatcherCore(EventHandler<DeviceChangeEventArgs>? eventHandler)
+        public USBWatcherCore(
+            EventHandler<DeviceChangeEventArgs>? eventHandler,
+            DeviceMonitoringScope monitoringScope = DeviceMonitoringScope.ExternalUsbDevicesOnly)
         {
-            DeviceWatcher deviceWatcher = new DeviceWatcher();
+            deviceWatcher = new DeviceWatcher(monitoringScope);
             deviceWatcher.DeviceChangeEvent += DeviceWatcher_DeviceChangeEvent;
             deviceWatcher.DeviceChangeEvent += eventHandler;
             QueryUSBSerialPorts();
@@ -30,18 +34,21 @@ namespace USBWatcher.Core
 
         private void QueryUSBSerialPorts()
         {
-            UsbDevicesList.Clear();
-            using (var searcher = new ManagementObjectSearcher(WMI_QUERY))
+            lock (devicesLock)
             {
-                var ports = searcher.Get().Cast<ManagementBaseObject>().ToList();
-                for (int i = 0; i < ports.Count; i++)
+                UsbDevicesList.Clear();
+                using (var searcher = new ManagementObjectSearcher(WMI_QUERY))
                 {
-                    string? DevID = ports[i]["DeviceID"].ToString();
-                    if (DevID == null)
-                        continue;
+                    var ports = searcher.Get().Cast<ManagementBaseObject>().ToList();
+                    for (int i = 0; i < ports.Count; i++)
+                    {
+                        string? DevID = ports[i]["DeviceID"]?.ToString();
+                        if (DevID == null)
+                            continue;
 
-                    UsbDevice usbdev = new UsbDevice(DevID);
-                    UsbDevicesList.Add(usbdev);
+                        UsbDevice usbdev = new UsbDevice(DevID);
+                        UsbDevicesList.Add(usbdev);
+                    }
                 }
             }
         }
@@ -53,27 +60,38 @@ namespace USBWatcher.Core
 
         public IReadOnlyList<UsbDeviceRecord> GetUsbDevicesList()
         {
-            return UsbDevicesList.Select(d => new UsbDeviceRecord(
-                d.FriendlyName,
-                d.DeviceRegKey,
-                d.VID,
-                d.PID,
-                d.PortName,
-                d.SerialNumber,
-                d.Manufacturer,
-                d.MI
-            )).ToList().AsReadOnly();
+            lock (devicesLock)
+            {
+                return UsbDevicesList.Select(d => new UsbDeviceRecord(
+                    d.FriendlyName,
+                    d.DeviceRegKey,
+                    d.VID,
+                    d.PID,
+                    d.PortName,
+                    d.SerialNumber,
+                    d.Manufacturer,
+                    d.MI
+                )).ToList().AsReadOnly();
+            }
+        }
+
+        public void SetMonitoringScope(DeviceMonitoringScope monitoringScope)
+        {
+            deviceWatcher.SetMonitoringScope(monitoringScope);
         }
 
         public bool SetUSBDeviceFriendlyName(string portName, string newName)
         {
             /* Find the device portName and change its Friendly name */
-            foreach (UsbDevice usbdev in UsbDevicesList)
+            lock (devicesLock)
             {
-                if (usbdev.PortName == portName)
+                foreach (UsbDevice usbdev in UsbDevicesList)
                 {
-                    usbdev.FriendlyName = newName + String.Format(" ({0})", portName);
-                    return true;
+                    if (usbdev.PortName == portName)
+                    {
+                        usbdev.FriendlyName = newName + String.Format(" ({0})", portName);
+                        return true;
+                    }
                 }
             }
             return false;
@@ -81,14 +99,23 @@ namespace USBWatcher.Core
         public string GetUSBDeviceFriendlyName(string portName)
         {
             /* Find the device portName and change its Friendly name */
-            foreach (UsbDevice usbdev in UsbDevicesList)
+            lock (devicesLock)
             {
-                if (usbdev.PortName == portName)
+                foreach (UsbDevice usbdev in UsbDevicesList)
                 {
-                    return usbdev.FriendlyName;
+                    if (usbdev.PortName == portName)
+                    {
+                        return usbdev.FriendlyName;
+                    }
                 }
             }
             throw new Exception($"Device with port name {portName} not found\nPlease Open \"Device Manager\" and reinstall the device.");
+        }
+
+        public void Dispose()
+        {
+            deviceWatcher.DeviceChangeEvent -= DeviceWatcher_DeviceChangeEvent;
+            deviceWatcher.Dispose();
         }
     }
 }

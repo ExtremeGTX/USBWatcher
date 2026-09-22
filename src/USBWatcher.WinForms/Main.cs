@@ -11,6 +11,8 @@ namespace USBWatcher
         private USBWatcherCore usb_watcher;
         private NotifyIcon? trayIcon;
         private bool MinimizeOnStart = false;
+        private ToolStripMenuItem? externalUsbDevicesOnlyMenuItem;
+        private ToolStripMenuItem? allDevicesMenuItem;
 
         public Main(bool minimized)
         {
@@ -18,7 +20,11 @@ namespace USBWatcher
             InitializeTrayIcon();
 
             Settings.Load();
-            usb_watcher = new USBWatcherCore(DeviceWatcher_DeviceChangeEvent);
+            InitializeDeviceMonitoringMenu();
+            DeviceMonitoringScope monitoringScope = Settings.Current.ListenToAllDevices
+                ? DeviceMonitoringScope.AllDevices
+                : DeviceMonitoringScope.ExternalUsbDevicesOnly;
+            usb_watcher = new USBWatcherCore(DeviceWatcher_DeviceChangeEvent, monitoringScope);
             RefreshUSBPortsList();
 
             if (minimized)
@@ -31,24 +37,73 @@ namespace USBWatcher
         {
             this.Invoke(delegate
             {
-                /* Log device event */
-                string[] DevInfo = new string[]
-                            {
-                                DateTime.Now.ToString("hh:mm:ss"),
-                                e.Description,
-                                e.Present ? "Inserted" : "Removed"
-                            };
-
-                ListViewItem lvi = new ListViewItem(DevInfo);
-                lvi.BackColor = e.Present ? Color.LightGreen : Color.LightPink;
-
-                lsvEvents.Items.Add(lvi);
-
-                /* Scroll to bottom */
-                lsvEvents.EnsureVisible(lsvEvents.Items.Count - 1);
+                AddDeviceEvents(e);
 
                 RefreshUSBPortsList();
             });
+        }
+
+        private void AddDeviceEvents(DeviceChangeEventArgs e)
+        {
+            IReadOnlyList<DeviceChangeGroup> groups = e.Groups.Count > 0
+                ? e.Groups
+                : new[]
+                {
+                    new DeviceChangeGroup(
+                        e.DeviceID,
+                        e.Description,
+                        new[] { new DeviceChangeNode(e.DeviceID, e.Description, e.Present, null) })
+                };
+
+            string timestamp = DateTime.Now.ToString("HH:mm:ss");
+            foreach (DeviceChangeGroup group in groups)
+            {
+                bool hasInsertions = group.Nodes.Any(node => node.Changed && node.Present);
+                bool hasRemovals = group.Nodes.Any(node => node.Changed && !node.Present);
+                var groupNode = new TreeNode($"{timestamp}  {group.Description}")
+                {
+                    Name = group.DeviceID,
+                    ToolTipText = group.DeviceID,
+                    BackColor = hasInsertions && hasRemovals
+                        ? Color.LightYellow
+                        : hasInsertions ? Color.LightGreen : Color.LightPink
+                };
+
+                var descendantParentIds = group.Nodes
+                    .Where(node => !string.IsNullOrEmpty(node.ParentDeviceID))
+                    .Select(node => node.ParentDeviceID!)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                foreach (DeviceChangeNode change in group.Nodes)
+                {
+                    if (string.Equals(change.DeviceID, group.DeviceID, StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    // The physical event device is the single displayed root. Omit any
+                    // intermediate descendant roots and promote their leaf devices to it.
+                    if (descendantParentIds.Contains(change.DeviceID))
+                    {
+                        continue;
+                    }
+
+                    var changeNode = new TreeNode(change.Description)
+                    {
+                        Name = change.DeviceID,
+                        ToolTipText = change.DeviceID,
+                        BackColor = change.Changed
+                            ? change.Present ? Color.LightGreen : Color.LightPink
+                            : SystemColors.Window
+                    };
+                    groupNode.Nodes.Add(changeNode);
+                }
+
+                tvwEvents.Nodes.Add(groupNode);
+                groupNode.ExpandAll();
+                tvwEvents.SelectedNode = groupNode;
+                groupNode.EnsureVisible();
+            }
         }
 
         void RefreshUSBPortsList()
@@ -103,6 +158,12 @@ namespace USBWatcher
                 this.Hide();
                 e.Cancel = true;
             }
+        }
+
+        private void Main_FormClosed(object? sender, FormClosedEventArgs e)
+        {
+            usb_watcher.Dispose();
+            trayIcon?.Dispose();
         }
         #endregion
 
@@ -179,6 +240,7 @@ namespace USBWatcher
 
         private void stripItemExit_Click(object? sender, EventArgs e)
         {
+            usb_watcher.Dispose();
             trayIcon?.Dispose();
             this.Dispose();
             Application.Exit();
@@ -260,7 +322,52 @@ namespace USBWatcher
         #endregion
 
         #region "ToolStrip menu"
-        private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void InitializeDeviceMonitoringMenu()
+        {
+            var openSettingsFileMenuItem = new ToolStripMenuItem("Open settings file");
+            openSettingsFileMenuItem.Click += settingsToolStripMenuItem_Click;
+
+            externalUsbDevicesOnlyMenuItem = new ToolStripMenuItem("External USB devices only") { CheckOnClick = true };
+            allDevicesMenuItem = new ToolStripMenuItem("All devices") { CheckOnClick = true };
+
+            externalUsbDevicesOnlyMenuItem.Click += (_, _) => SetDeviceMonitoringScope(DeviceMonitoringScope.ExternalUsbDevicesOnly);
+            allDevicesMenuItem.Click += (_, _) => SetDeviceMonitoringScope(DeviceMonitoringScope.AllDevices);
+
+            var listenForMenuItem = new ToolStripMenuItem("Listen for");
+            listenForMenuItem.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                externalUsbDevicesOnlyMenuItem,
+                allDevicesMenuItem
+            });
+
+            settingsToolStripMenuItem.DropDownItems.Add(openSettingsFileMenuItem);
+            settingsToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            settingsToolStripMenuItem.DropDownItems.Add(listenForMenuItem);
+            UpdateDeviceMonitoringMenuChecks();
+        }
+
+        private void SetDeviceMonitoringScope(DeviceMonitoringScope monitoringScope)
+        {
+            usb_watcher.SetMonitoringScope(monitoringScope);
+            Settings.Current.ListenToAllDevices = monitoringScope == DeviceMonitoringScope.AllDevices;
+            Settings.Save();
+            UpdateDeviceMonitoringMenuChecks();
+        }
+
+        private void UpdateDeviceMonitoringMenuChecks()
+        {
+            if (externalUsbDevicesOnlyMenuItem != null)
+            {
+                externalUsbDevicesOnlyMenuItem.Checked = !Settings.Current.ListenToAllDevices;
+            }
+
+            if (allDevicesMenuItem != null)
+            {
+                allDevicesMenuItem.Checked = Settings.Current.ListenToAllDevices;
+            }
+        }
+
+        private void settingsToolStripMenuItem_Click(object? sender, EventArgs e)
         {
             /* Open settings file in notepad */
             string settingsPath = Settings.GetSettingsPath();
@@ -276,7 +383,7 @@ namespace USBWatcher
 
         private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            lsvEvents.Items.Clear();
+            tvwEvents.Nodes.Clear();
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)

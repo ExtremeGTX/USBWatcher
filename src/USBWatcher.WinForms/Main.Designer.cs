@@ -36,10 +36,7 @@
             columnHeader3 = new ColumnHeader();
             columnHeader4 = new ColumnHeader();
             columnHeader8 = new ColumnHeader();
-            lsvEvents = new ListView();
-            columnHeader5 = new ColumnHeader();
-            columnHeader6 = new ColumnHeader();
-            columnHeader7 = new ColumnHeader();
+            tvwEvents = new TreeView();
             menuStrip1 = new MenuStrip();
             settingsToolStripMenuItem = new ToolStripMenuItem();
             clearLogsToolStripMenuItem = new ToolStripMenuItem();
@@ -64,7 +61,7 @@
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(lsvEvents);
+            splitContainer1.Panel2.Controls.Add(tvwEvents);
             splitContainer1.Size = new Size(448, 434);
             splitContainer1.SplitterDistance = 150;
             splitContainer1.TabIndex = 0;
@@ -106,32 +103,16 @@
             // 
             columnHeader8.Text = "SN";
             // 
-            // lsvEvents
-            // 
-            lsvEvents.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            lsvEvents.Columns.AddRange(new ColumnHeader[] { columnHeader5, columnHeader6, columnHeader7 });
-            lsvEvents.FullRowSelect = true;
-            lsvEvents.Location = new Point(12, 3);
-            lsvEvents.Name = "lsvEvents";
-            lsvEvents.Size = new Size(424, 265);
-            lsvEvents.TabIndex = 4;
-            lsvEvents.UseCompatibleStateImageBehavior = false;
-            lsvEvents.View = View.Details;
-            // 
-            // columnHeader5
-            // 
-            columnHeader5.Text = "Time";
-            columnHeader5.Width = 100;
-            // 
-            // columnHeader6
-            // 
-            columnHeader6.Text = "Device Name";
-            columnHeader6.Width = 240;
-            // 
-            // columnHeader7
-            // 
-            columnHeader7.Text = "Event";
-            columnHeader7.Width = 80;
+            // tvwEvents
+            //
+            tvwEvents.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            tvwEvents.FullRowSelect = true;
+            tvwEvents.HideSelection = false;
+            tvwEvents.Location = new Point(12, 3);
+            tvwEvents.Name = "tvwEvents";
+            tvwEvents.ShowNodeToolTips = true;
+            tvwEvents.Size = new Size(424, 265);
+            tvwEvents.TabIndex = 4;
             // 
             // menuStrip1
             // 
@@ -147,7 +128,6 @@
             settingsToolStripMenuItem.Name = "settingsToolStripMenuItem";
             settingsToolStripMenuItem.Size = new Size(61, 20);
             settingsToolStripMenuItem.Text = "Settings";
-            settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
             // 
             // clearLogsToolStripMenuItem
             // 
@@ -176,6 +156,7 @@
             Name = "Main";
             Text = "USB Watcher";
             FormClosing += Main_FormClosing;
+            FormClosed += Main_FormClosed;
             Shown += Main_FormShown;
             splitContainer1.Panel1.ResumeLayout(false);
             splitContainer1.Panel2.ResumeLayout(false);
@@ -191,10 +172,7 @@
         #endregion
 
         private SplitContainer splitContainer1;
-        private ListView lsvEvents;
-        private ColumnHeader columnHeader5;
-        private ColumnHeader columnHeader6;
-        private ColumnHeader columnHeader7;
+        private TreeView tvwEvents;
         private MenuStrip menuStrip1;
         private ToolStripMenuItem aboutToolStripMenuItem;
         private ToolStripMenuItem clearLogsToolStripMenuItem;
