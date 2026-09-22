@@ -41,6 +41,8 @@ USB Watcher is a simple tool mainly to rename USB Serial ports on Windows
 - List Serial Ports
 - Rename Serial Ports
 - Listen to USB Insert/Remove Events
+- Fast native device notifications with an external-USB-only or all-devices listening mode
+- Hierarchical event log showing physical devices and changed descendants
 - [v1.5] **Automatically set user-defined Device names even if the device USB/COM port changed!**
 - [v1.5] Highlight Device events based on Event type
 - [v1.5] Show FTDI Devices serial number

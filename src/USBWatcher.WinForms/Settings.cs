@@ -5,6 +5,7 @@ namespace USBWatcher
     internal class Settings
     {
         public Dictionary<string, string> FriendlyNames { get; set; } = new();
+        public bool ListenToAllDevices { get; set; } = false;
 
         private static readonly string SettingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
