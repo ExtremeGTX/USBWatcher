@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -20,8 +21,11 @@ namespace USBWatcher.Core
         private const int CM_NOTIFY_FILTER_TYPE_DEVICEINTERFACE = 0;
         private const int CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL = 0;
         private const int CM_NOTIFY_ACTION_DEVICEINTERFACEREMOVAL = 1;
+        private const int QuietPeriodMilliseconds = 125;
+        private const int MaximumBatchMilliseconds = 600;
 
         private readonly object syncRoot = new();
+        private readonly object batchSyncRoot = new();
         private readonly ConcurrentDictionary<string, bool> pendingInterfaceChanges =
             new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, string> deviceNameCache =
@@ -36,6 +40,8 @@ namespace USBWatcher.Core
         private ManagementEventWatcher? fallbackWatcher;
         private bool nativeWatcherActive;
         private volatile bool disposed;
+        private long batchStartedTimestamp;
+        private long lastNotificationTimestamp;
 
         internal event EventHandler<DeviceChangeEventArgs>? DeviceChangeEvent;
 
@@ -141,13 +147,16 @@ namespace USBWatcher.Core
                 ? Marshal.PtrToStringUni(IntPtr.Add(eventData, 24)) ?? string.Empty
                 : string.Empty;
 
-            if (!string.IsNullOrEmpty(devicePath))
+            lock (batchSyncRoot)
             {
-                pendingInterfaceChanges[devicePath] =
-                    action == CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL;
-            }
+                if (!string.IsNullOrEmpty(devicePath))
+                {
+                    pendingInterfaceChanges[devicePath] =
+                        action == CM_NOTIFY_ACTION_DEVICEINTERFACEARRIVAL;
+                }
 
-            ScheduleDispatch();
+                ScheduleDispatchLocked();
+            }
             return CR_SUCCESS;
         }
 
@@ -175,22 +184,25 @@ namespace USBWatcher.Core
             });
         }
 
-        private void ScheduleDispatch()
+        private void ScheduleDispatchLocked()
         {
-            if (disposed)
+            long now = Stopwatch.GetTimestamp();
+            if (batchStartedTimestamp == 0)
             {
-                return;
+                batchStartedTimestamp = now;
             }
 
+            lastNotificationTimestamp = now;
+            double elapsed = Stopwatch.GetElapsedTime(batchStartedTimestamp, now).TotalMilliseconds;
+            int remaining = Math.Max(1, MaximumBatchMilliseconds - (int)elapsed);
+            int due = Math.Min(QuietPeriodMilliseconds, remaining);
             try
             {
-                // One physical connection produces several interface events.
-                // Wait briefly so they can be shown as one complete hierarchy.
-                debounceTimer.Change(TimeSpan.FromMilliseconds(300), Timeout.InfiniteTimeSpan);
+                debounceTimer.Change(TimeSpan.FromMilliseconds(due), Timeout.InfiniteTimeSpan);
             }
             catch (ObjectDisposedException)
             {
-                // Shutdown raced the callback.
+                // Shutdown raced the native callback.
             }
         }
 
@@ -199,6 +211,34 @@ namespace USBWatcher.Core
             if (disposed || !nativeWatcherActive)
             {
                 return;
+            }
+
+            List<KeyValuePair<string, bool>> pendingChanges;
+            lock (batchSyncRoot)
+            {
+                long now = Stopwatch.GetTimestamp();
+                double quietFor = Stopwatch.GetElapsedTime(lastNotificationTimestamp, now).TotalMilliseconds;
+                double batchAge = Stopwatch.GetElapsedTime(batchStartedTimestamp, now).TotalMilliseconds;
+                if (quietFor < QuietPeriodMilliseconds && batchAge < MaximumBatchMilliseconds)
+                {
+                    int untilQuiet = Math.Max(1, QuietPeriodMilliseconds - (int)quietFor);
+                    int untilMaximum = Math.Max(1, MaximumBatchMilliseconds - (int)batchAge);
+                    debounceTimer.Change(
+                        TimeSpan.FromMilliseconds(Math.Min(untilQuiet, untilMaximum)),
+                        Timeout.InfiniteTimeSpan);
+                    return;
+                }
+
+                batchStartedTimestamp = 0;
+                lastNotificationTimestamp = 0;
+                pendingChanges = new List<KeyValuePair<string, bool>>();
+                foreach (KeyValuePair<string, bool> entry in pendingInterfaceChanges.ToArray())
+                {
+                    if (pendingInterfaceChanges.TryRemove(entry.Key, out bool interfacePresent))
+                    {
+                        pendingChanges.Add(new KeyValuePair<string, bool>(entry.Key, interfacePresent));
+                    }
+                }
             }
 
             List<DeviceChangeGroup> groups;
@@ -213,15 +253,12 @@ namespace USBWatcher.Core
                 Dictionary<string, DeviceSnapshot> currentTree = CaptureDeviceTree();
                 Dictionary<string, bool> changedNodes = FindChangedNodes(previousTree, currentTree);
 
-                foreach (var entry in pendingInterfaceChanges.ToArray())
+                foreach (KeyValuePair<string, bool> entry in pendingChanges)
                 {
-                    if (pendingInterfaceChanges.TryRemove(entry.Key, out bool interfacePresent))
+                    string instanceId = GetDeviceInstanceId(entry.Key);
+                    if (!string.IsNullOrEmpty(instanceId))
                     {
-                        string instanceId = GetDeviceInstanceId(entry.Key);
-                        if (!string.IsNullOrEmpty(instanceId))
-                        {
-                            changedNodes[instanceId] = interfacePresent;
-                        }
+                        changedNodes[instanceId] = entry.Value;
                     }
                 }
 
@@ -697,7 +734,7 @@ namespace USBWatcher.Core
                 return cachedName;
             }
 
-            string? name = GetRegistryDeviceName(instanceId) ?? GetWmiDeviceName(instanceId);
+            string? name = GetRegistryDeviceName(instanceId) ?? GetConfigurationManagerDeviceName(instanceId);
             if (string.IsNullOrWhiteSpace(name))
             {
                 Match hardwareId = Regex.Match(
@@ -713,32 +750,49 @@ namespace USBWatcher.Core
             return name;
         }
 
-        private static string? GetWmiDeviceName(string instanceId)
+        private static string? GetConfigurationManagerDeviceName(string instanceId)
         {
-            string escapedInstanceId = instanceId
-                .Replace("\\", "\\\\", StringComparison.Ordinal)
-                .Replace("'", "\\'", StringComparison.Ordinal);
-
-            try
+            if (CM_Locate_DevNodeW(out uint devInst, instanceId, 0) != CR_SUCCESS)
             {
-                using var searcher = new ManagementObjectSearcher(
-                    "root\\CIMV2",
-                    $"SELECT Caption, Name FROM Win32_PnPEntity WHERE DeviceID='{escapedInstanceId}'");
-                using ManagementObjectCollection devices = searcher.Get();
-                foreach (ManagementBaseObject device in devices)
+                return null;
+            }
+
+            DevPropKey[] properties =
+            {
+                new(new Guid("540B947E-8B40-45BC-A8A2-6A0B894CBDA2"), 4),
+                new(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 14),
+                new(new Guid("A45C254E-DF1C-4EFD-8020-67D146A850E0"), 2)
+            };
+
+            for (int index = 0; index < properties.Length; index++)
+            {
+                DevPropKey property = properties[index];
+                uint bufferSize = 0;
+                uint result = CM_Get_DevNode_PropertyW(
+                    devInst, ref property, out _, IntPtr.Zero, ref bufferSize, 0);
+                if (result != 0x0000001A || bufferSize < sizeof(char))
                 {
-                    string? name = device["Caption"]?.ToString() ?? device["Name"]?.ToString();
-                    if (!string.IsNullOrWhiteSpace(name))
+                    continue;
+                }
+
+                IntPtr buffer = Marshal.AllocHGlobal((int)bufferSize);
+                try
+                {
+                    result = CM_Get_DevNode_PropertyW(
+                        devInst, ref property, out _, buffer, ref bufferSize, 0);
+                    string? value = result == CR_SUCCESS
+                        ? Marshal.PtrToStringUni(buffer)?.TrimEnd('\0')
+                        : null;
+                    if (!string.IsNullOrWhiteSpace(value))
                     {
-                        return name;
+                        int separator = value.LastIndexOf(';');
+                        return separator >= 0 ? value[(separator + 1)..] : value;
                     }
                 }
-            }
-            catch (ManagementException)
-            {
-            }
-            catch (COMException)
-            {
+                finally
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
             }
 
             return null;
@@ -797,6 +851,11 @@ namespace USBWatcher.Core
         {
             nativeWatcherActive = false;
             debounceTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            lock (batchSyncRoot)
+            {
+                batchStartedTimestamp = 0;
+                lastNotificationTimestamp = 0;
+            }
 
             if (notificationHandle != IntPtr.Zero)
             {
@@ -834,6 +893,19 @@ namespace USBWatcher.Core
 
         private sealed record DeviceSnapshot(string DeviceId, string? ParentDeviceId);
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct DevPropKey
+        {
+            internal DevPropKey(Guid formatId, uint propertyId)
+            {
+                FormatId = formatId;
+                PropertyId = propertyId;
+            }
+
+            internal Guid FormatId;
+            internal uint PropertyId;
+        }
+
         [StructLayout(LayoutKind.Explicit, Size = 416)]
         private struct CmNotifyFilter
         {
@@ -866,6 +938,15 @@ namespace USBWatcher.Core
         private static extern uint CM_Locate_DevNodeW(
             out uint devInst,
             string? deviceId,
+            uint flags);
+
+        [DllImport("cfgmgr32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint CM_Get_DevNode_PropertyW(
+            uint devInst,
+            ref DevPropKey propertyKey,
+            out uint propertyType,
+            IntPtr propertyBuffer,
+            ref uint propertyBufferSize,
             uint flags);
 
         [DllImport("cfgmgr32.dll")]

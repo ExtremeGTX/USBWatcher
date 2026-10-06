@@ -17,6 +17,7 @@ namespace USBWatcher
         public Main(bool minimized)
         {
             InitializeComponent();
+            Icon = Properties.Resources.appicon;
             InitializeTrayIcon();
 
             Settings.Load();
@@ -25,6 +26,7 @@ namespace USBWatcher
                 ? DeviceMonitoringScope.AllDevices
                 : DeviceMonitoringScope.ExternalUsbDevicesOnly;
             usb_watcher = new USBWatcherCore(DeviceWatcher_DeviceChangeEvent, monitoringScope);
+            usb_watcher.DeviceListChanged += USBWatcher_DeviceListChanged;
             RefreshUSBPortsList();
 
             if (minimized)
@@ -38,9 +40,17 @@ namespace USBWatcher
             this.Invoke(delegate
             {
                 AddDeviceEvents(e);
-
-                RefreshUSBPortsList();
             });
+        }
+
+        private void USBWatcher_DeviceListChanged(object? sender, EventArgs e)
+        {
+            if (IsDisposed || !IsHandleCreated)
+            {
+                return;
+            }
+
+            BeginInvoke((System.Action)RefreshUSBPortsList);
         }
 
         private void AddDeviceEvents(DeviceChangeEventArgs e)
@@ -162,6 +172,7 @@ namespace USBWatcher
 
         private void Main_FormClosed(object? sender, FormClosedEventArgs e)
         {
+            usb_watcher.DeviceListChanged -= USBWatcher_DeviceListChanged;
             usb_watcher.Dispose();
             trayIcon?.Dispose();
         }

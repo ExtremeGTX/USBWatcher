@@ -61,6 +61,20 @@ Just run `USBWatcher.exe` no installation is needed.
 > [!NOTE]
 > Administrator privilege needed to access devices registry paths.
 
+### WinUI 3 frontend
+
+`USBWatcher.WinUI` is the modern Windows 11 frontend. It uses the same
+`USBWatcher.Core` device watcher as the WinForms application and targets the
+stable Windows App SDK 2.5.1 release.
+
+```powershell
+dotnet build src\USBWatcher.WinUI\USBWatcher.WinUI.csproj -c Release
+```
+
+The executable is produced under
+`src\USBWatcher.WinUI\bin\Release\net8.0-windows10.0.19041.0\win-x64` when the
+project is built directly. Run it as administrator, as with the WinForms app.
+
 ## Built With
 
 * [![.NET]][.NET-url]

@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher", ".\USBWatcher.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher.Core", ".\USBWatcher.Core\USBWatcher.Core.csproj", "{997E4177-2230-4A21-882B-73F29B0C7E4A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "USBWatcher.WinUI", ".\USBWatcher.WinUI\USBWatcher.WinUI.csproj", "{8A5D752A-1E26-47BB-B6AE-4A638313C4B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{997E4177-2230-4A21-882B-73F29B0C7E4A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A5D752A-1E26-47BB-B6AE-4A638313C4B2}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{8A5D752A-1E26-47BB-B6AE-4A638313C4B2}.Debug|Any CPU.Build.0 = Debug|x64
+		{8A5D752A-1E26-47BB-B6AE-4A638313C4B2}.Release|Any CPU.ActiveCfg = Release|x64
+		{8A5D752A-1E26-47BB-B6AE-4A638313C4B2}.Release|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
