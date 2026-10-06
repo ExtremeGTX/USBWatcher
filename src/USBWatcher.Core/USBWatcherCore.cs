@@ -1,4 +1,5 @@
 ﻿using System.Management;
+using System.Runtime.InteropServices;
 
 namespace USBWatcher.Core
 {
@@ -10,7 +11,8 @@ namespace USBWatcher.Core
         string PortName,
         string SerialNumber,
         string Manufacturer,
-        string MI
+        string MI,
+        string DeviceName
     );
 
     public sealed class USBWatcherCore : IDisposable
@@ -21,6 +23,11 @@ namespace USBWatcher.Core
         readonly List<UsbDevice> UsbDevicesList = new List<UsbDevice>();
         readonly DeviceWatcher deviceWatcher;
         readonly object devicesLock = new();
+        int deviceRefreshRequested;
+        int deviceRefreshWorkerRunning;
+        volatile bool disposed;
+
+        public event EventHandler? DeviceListChanged;
 
         public USBWatcherCore(
             EventHandler<DeviceChangeEventArgs>? eventHandler,
@@ -34,28 +41,85 @@ namespace USBWatcher.Core
 
         private void QueryUSBSerialPorts()
         {
+            var refreshedDevices = new List<UsbDevice>();
+            using (var searcher = new ManagementObjectSearcher(WMI_QUERY))
+            {
+                var ports = searcher.Get().Cast<ManagementBaseObject>().ToList();
+                for (int i = 0; i < ports.Count; i++)
+                {
+                    string? DevID = ports[i]["DeviceID"]?.ToString();
+                    if (DevID == null)
+                        continue;
+
+                    refreshedDevices.Add(new UsbDevice(DevID));
+                }
+            }
+
             lock (devicesLock)
             {
                 UsbDevicesList.Clear();
-                using (var searcher = new ManagementObjectSearcher(WMI_QUERY))
-                {
-                    var ports = searcher.Get().Cast<ManagementBaseObject>().ToList();
-                    for (int i = 0; i < ports.Count; i++)
-                    {
-                        string? DevID = ports[i]["DeviceID"]?.ToString();
-                        if (DevID == null)
-                            continue;
-
-                        UsbDevice usbdev = new UsbDevice(DevID);
-                        UsbDevicesList.Add(usbdev);
-                    }
-                }
+                UsbDevicesList.AddRange(refreshedDevices);
             }
         }
         private void DeviceWatcher_DeviceChangeEvent(object? sender, DeviceChangeEventArgs e)
         {
-            /* Refresh current device list */
-            QueryUSBSerialPorts();
+            RequestDeviceListRefresh();
+        }
+
+        private void RequestDeviceListRefresh()
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref deviceRefreshRequested, 1);
+            if (Interlocked.CompareExchange(ref deviceRefreshWorkerRunning, 1, 0) == 0)
+            {
+                _ = Task.Run(ProcessDeviceListRefreshesAsync);
+            }
+        }
+
+        private async Task ProcessDeviceListRefreshesAsync()
+        {
+            try
+            {
+                while (!disposed && Interlocked.Exchange(ref deviceRefreshRequested, 0) == 1)
+                {
+                    // Let the port function finish registering, without delaying the
+                    // device event or blocking readers of the current snapshot.
+                    await Task.Delay(75).ConfigureAwait(false);
+                    if (disposed)
+                    {
+                        break;
+                    }
+
+                    try
+                    {
+                        QueryUSBSerialPorts();
+                        if (!disposed)
+                        {
+                            DeviceListChanged?.Invoke(this, EventArgs.Empty);
+                        }
+                    }
+                    catch (ManagementException)
+                    {
+                        // A later PnP notification will request another refresh.
+                    }
+                    catch (COMException)
+                    {
+                        // WMI can be temporarily unavailable during enumeration.
+                    }
+                }
+            }
+            finally
+            {
+                Interlocked.Exchange(ref deviceRefreshWorkerRunning, 0);
+                if (!disposed && Volatile.Read(ref deviceRefreshRequested) != 0)
+                {
+                    RequestDeviceListRefresh();
+                }
+            }
         }
 
         public IReadOnlyList<UsbDeviceRecord> GetUsbDevicesList()
@@ -70,7 +134,8 @@ namespace USBWatcher.Core
                     d.PortName,
                     d.SerialNumber,
                     d.Manufacturer,
-                    d.MI
+                    d.MI,
+                    d.DeviceName
                 )).ToList().AsReadOnly();
             }
         }
@@ -114,8 +179,10 @@ namespace USBWatcher.Core
 
         public void Dispose()
         {
+            disposed = true;
             deviceWatcher.DeviceChangeEvent -= DeviceWatcher_DeviceChangeEvent;
             deviceWatcher.Dispose();
+            DeviceListChanged = null;
         }
     }
 }

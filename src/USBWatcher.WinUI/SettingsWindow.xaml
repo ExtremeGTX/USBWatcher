@@ -1,0 +1,119 @@
+<Window
+    x:Class="USBWatcher.WinUI.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    Title="USBWatcher Settings">
+
+    <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Stretch">
+            <StackPanel MaxWidth="700" Padding="30,24,30,34" Spacing="22"
+                        HorizontalAlignment="Stretch">
+                <StackPanel Spacing="4" Margin="0,0,0,4">
+                    <TextBlock Text="Settings" Style="{ThemeResource TitleTextBlockStyle}" />
+                    <TextBlock Text="Customize how USBWatcher monitors devices and behaves in Windows."
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="General" Style="{ThemeResource BodyStrongTextBlockStyle}" Margin="0,0,0,2" />
+
+                    <controls:SettingsCard Header="Launch on startup"
+                                           Description="Start USBWatcher automatically when you sign in to Windows.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE83B;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="StartWithWindowsToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="Start minimized"
+                                           Description="Open USBWatcher directly in the notification area.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE921;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="StartMinimizedToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="Minimize to tray"
+                                           Description="Keep monitoring devices when the main window is closed.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE7E8;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="MinimizeToTrayToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="Show only connected devices"
+                                           Description="Hide devices that are no longer available.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <ImageIcon Source="ms-appx:///Assets/Usb48.png" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="ShowConnectedToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="Auto-scroll recent events"
+                                           Description="Keep the newest device event visible automatically.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE74A;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="AutoScrollToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
+                    <controls:SettingsCard Header="Remember window position"
+                                           Description="Restore the previous window size and screen position.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE737;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="RememberPositionToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Monitoring" Style="{ThemeResource BodyStrongTextBlockStyle}" Margin="0,0,0,2" />
+                    <controls:SettingsCard Header="Devices to monitor"
+                                           Description="Limit notifications to external USB devices or listen for every device class.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE9D2;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ComboBox x:Name="MonitoringScopeBox" Width="210" SelectionChanged="SettingChanged">
+                            <ComboBoxItem Content="External USB only" Tag="External" />
+                            <ComboBoxItem Content="All devices" Tag="All" />
+                        </ComboBox>
+                    </controls:SettingsCard>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Appearance" Style="{ThemeResource BodyStrongTextBlockStyle}" Margin="0,0,0,2" />
+                    <controls:SettingsCard Header="App theme"
+                                           Description="Choose how USBWatcher follows the Windows color theme.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE790;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ComboBox x:Name="ThemeBox" Width="180" SelectionChanged="SettingChanged">
+                            <ComboBoxItem Content="Windows default" Tag="System" />
+                            <ComboBoxItem Content="Light" Tag="Light" />
+                            <ComboBoxItem Content="Dark" Tag="Dark" />
+                        </ComboBox>
+                    </controls:SettingsCard>
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Data" Style="{ThemeResource BodyStrongTextBlockStyle}" Margin="0,0,0,2" />
+                    <controls:SettingsCard Header="Maximum recent events"
+                                           Description="Choose how many device events are retained in the log.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE81C;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <NumberBox x:Name="MaxEventsBox" Width="140" Minimum="10" Maximum="1000"
+                                   SmallChange="10" SpinButtonPlacementMode="Compact"
+                                   ValueChanged="MaxEventsBox_ValueChanged" />
+                    </controls:SettingsCard>
+                </StackPanel>
+
+                <TextBlock Text="Changes are saved automatically."
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

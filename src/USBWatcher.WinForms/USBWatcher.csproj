@@ -12,7 +12,7 @@
     <Copyright>Mohamed ElShahawi</Copyright>
     <Company>ExtremeGTX</Company>
     <PackageProjectUrl>https://github.com/ExtremeGTX/USBWatcher</PackageProjectUrl>
-    <PackageIcon>icons8-usb-connected-70.png</PackageIcon>
+    <PackageIcon>appicon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/ExtremeGTX/USBWatcher</RepositoryUrl>
     <AssemblyVersion>1.0</AssemblyVersion>
@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Content Include="Resources\appicon.ico" />
+    <None Include="Resources\appicon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
