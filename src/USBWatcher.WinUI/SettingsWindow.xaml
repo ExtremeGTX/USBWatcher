@@ -46,7 +46,7 @@
                     <controls:SettingsCard Header="Show only connected devices"
                                            Description="Hide devices that are no longer available.">
                         <controls:SettingsCard.HeaderIcon>
-                            <ImageIcon Source="ms-appx:///Assets/Usb48.png" />
+                            <FontIcon Glyph="&#xE88E;" FontFamily="Segoe Fluent Icons" />
                         </controls:SettingsCard.HeaderIcon>
                         <ToggleSwitch x:Name="ShowConnectedToggle" Toggled="SettingChanged" />
                     </controls:SettingsCard>
