@@ -12,6 +12,7 @@ public sealed class AppSettings
     public bool MinimizeToTray { get; set; } = true;
     public bool ShowOnlyConnectedDevices { get; set; }
     public bool AutoScrollRecentEvents { get; set; } = true;
+    public bool ExpandOnlyLastDeviceEvent { get; set; }
     public bool RememberWindowPosition { get; set; } = true;
     public string Theme { get; set; } = "System";
     public int MaxRecentEvents { get; set; } = 100;

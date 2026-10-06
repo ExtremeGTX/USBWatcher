@@ -121,7 +121,8 @@
                     <TreeView x:Name="EventsTree" Grid.Row="2" ItemsSource="{x:Bind Events}">
                         <TreeView.ItemTemplate>
                             <DataTemplate>
-                                <TreeViewItem ItemsSource="{Binding Children}" IsExpanded="True"
+                                <TreeViewItem ItemsSource="{Binding Children}"
+                                              IsExpanded="{Binding IsExpanded, Mode=TwoWay}"
                                               MinHeight="28" Padding="0">
                                     <Grid MinHeight="28" ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
