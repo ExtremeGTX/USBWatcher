@@ -18,6 +18,7 @@ public sealed partial class MainWindow : Window
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
     private SettingsWindow? _settingsWindow;
     private bool _exitRequested;
+    private bool _isMainWindowVisible = true;
 
     public ObservableCollection<DeviceRow> Devices { get; } = new();
     public ObservableCollection<EventNode> Events { get; } = new();
@@ -99,7 +100,7 @@ public sealed partial class MainWindow : Window
     private void HideAfterFirstActivation(object sender, WindowActivatedEventArgs args)
     {
         Activated -= HideAfterFirstActivation;
-        AppWindow.Hide();
+        HideWindow();
     }
 
     private System.Windows.Forms.NotifyIcon CreateTrayIcon()
@@ -121,7 +122,7 @@ public sealed partial class MainWindow : Window
         {
             if (args.Button == System.Windows.Forms.MouseButtons.Left)
             {
-                DispatcherQueue.TryEnqueue(ShowWindow);
+                DispatcherQueue.TryEnqueue(ToggleWindowVisibility);
             }
         };
         return icon;
@@ -432,7 +433,7 @@ public sealed partial class MainWindow : Window
         if (!_exitRequested && SettingsStore.Current.MinimizeToTray)
         {
             args.Cancel = true;
-            AppWindow.Hide();
+            HideWindow();
         }
     }
 
@@ -453,11 +454,38 @@ public sealed partial class MainWindow : Window
 
     private void ShowWindow()
     {
-        Activate();
+        if (AppWindow.Presenter is OverlappedPresenter presenter &&
+            presenter.State == OverlappedPresenterState.Minimized)
+        {
+            presenter.Restore();
+        }
+
         AppWindow.Show();
+        Activate();
+        _isMainWindowVisible = true;
         if (SettingsStore.Current.AutoScrollRecentEvents && Events.Count > 0)
         {
             ScrollEventsToEnd();
+        }
+    }
+
+    private void HideWindow()
+    {
+        AppWindow.Hide();
+        _isMainWindowVisible = false;
+    }
+
+    private void ToggleWindowVisibility()
+    {
+        bool isMinimized = AppWindow.Presenter is OverlappedPresenter presenter &&
+            presenter.State == OverlappedPresenterState.Minimized;
+        if (_isMainWindowVisible && !isMinimized)
+        {
+            HideWindow();
+        }
+        else
+        {
+            ShowWindow();
         }
     }
 
