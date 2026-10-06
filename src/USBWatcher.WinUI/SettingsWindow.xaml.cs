@@ -41,6 +41,7 @@ public sealed partial class SettingsWindow : Window
         MinimizeToTrayToggle.IsOn = settings.MinimizeToTray;
         ShowConnectedToggle.IsOn = settings.ShowOnlyConnectedDevices;
         AutoScrollToggle.IsOn = settings.AutoScrollRecentEvents;
+        ExpandLastEventOnlyToggle.IsOn = settings.ExpandOnlyLastDeviceEvent;
         RememberPositionToggle.IsOn = settings.RememberWindowPosition;
         MonitoringScopeBox.SelectedIndex = settings.ListenToAllDevices ? 1 : 0;
         ThemeBox.SelectedIndex = settings.Theme switch
@@ -70,6 +71,7 @@ public sealed partial class SettingsWindow : Window
         settings.MinimizeToTray = MinimizeToTrayToggle.IsOn;
         settings.ShowOnlyConnectedDevices = ShowConnectedToggle.IsOn;
         settings.AutoScrollRecentEvents = AutoScrollToggle.IsOn;
+        settings.ExpandOnlyLastDeviceEvent = ExpandLastEventOnlyToggle.IsOn;
         settings.RememberWindowPosition = RememberPositionToggle.IsOn;
         settings.ListenToAllDevices = MonitoringScopeBox.SelectedIndex == 1;
         settings.Theme = (ThemeBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "System";

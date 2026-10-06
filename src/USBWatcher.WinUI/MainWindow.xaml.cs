@@ -194,13 +194,14 @@ public sealed partial class MainWindow : Window
                     ShowStatus = true,
                     StatusBrush = new SolidColorBrush(statusColor),
                     MergeKind = eventText,
+                    GroupTitle = group.Description,
                     LastUpdatedUtc = nowUtc
                 };
                 Events.Add(root);
             }
             else
             {
-                root.Title = group.Description;
+                root.GroupTitle = group.Description;
                 root.Details = eventText;
                 root.StatusBrush = new SolidColorBrush(statusColor);
                 root.LastUpdatedUtc = nowUtc;
@@ -239,11 +240,29 @@ public sealed partial class MainWindow : Window
                 .ToArray();
 
             root.Children.Clear();
-            foreach (EventNode descendant in visibleDescendants)
+            if (visibleDescendants.Length == 1)
             {
-                root.Children.Add(descendant);
+                // A wrapper with only one useful child adds no information.
+                // Promote the child label while retaining the physical group ID
+                // internally so later functions can still merge into this event.
+                root.Title = visibleDescendants[0].Title;
+            }
+            else
+            {
+                root.Title = root.GroupTitle;
+                foreach (EventNode descendant in visibleDescendants)
+                {
+                    root.Children.Add(descendant);
+                }
+            }
+
+            if (!SettingsStore.Current.ExpandOnlyLastDeviceEvent)
+            {
+                root.IsExpanded = true;
             }
         }
+
+        ApplyEventExpansionPolicy();
 
         int limit = Math.Clamp(SettingsStore.Current.MaxRecentEvents, 10, 1000);
         while (Events.Count > limit)
@@ -254,6 +273,25 @@ public sealed partial class MainWindow : Window
         if (SettingsStore.Current.AutoScrollRecentEvents && Events.Count > 0)
         {
             ScrollEventsToEnd();
+        }
+    }
+
+    private void ApplyEventExpansionPolicy()
+    {
+        if (SettingsStore.Current.ExpandOnlyLastDeviceEvent)
+        {
+            for (int index = 0; index < Events.Count; index++)
+            {
+                Events[index].IsExpanded = index == Events.Count - 1;
+            }
+            return;
+        }
+
+        // New and incrementally updated device events should open automatically.
+        // Existing manually collapsed entries remain untouched until updated.
+        if (Events.Count > 0)
+        {
+            Events[^1].IsExpanded = true;
         }
     }
 
@@ -355,6 +393,16 @@ public sealed partial class MainWindow : Window
             : DeviceMonitoringScope.ExternalUsbDevicesOnly);
         ApplyTheme();
         TrimEvents();
+        ApplyExpansionSettingToExistingEvents();
+    }
+
+    private void ApplyExpansionSettingToExistingEvents()
+    {
+        for (int index = 0; index < Events.Count; index++)
+        {
+            Events[index].IsExpanded = !SettingsStore.Current.ExpandOnlyLastDeviceEvent ||
+                index == Events.Count - 1;
+        }
     }
 
     private void ApplyTheme()

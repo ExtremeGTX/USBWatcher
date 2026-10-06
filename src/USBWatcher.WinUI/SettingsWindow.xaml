@@ -59,6 +59,14 @@
                         <ToggleSwitch x:Name="AutoScrollToggle" Toggled="SettingChanged" />
                     </controls:SettingsCard>
 
+                    <controls:SettingsCard Header="Expand only the last device event"
+                                           Description="Collapse older events when a new device event appears.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE70D;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <ToggleSwitch x:Name="ExpandLastEventOnlyToggle" Toggled="SettingChanged" />
+                    </controls:SettingsCard>
+
                     <controls:SettingsCard Header="Remember window position"
                                            Description="Restore the previous window size and screen position.">
                         <controls:SettingsCard.HeaderIcon>

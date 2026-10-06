@@ -23,6 +23,7 @@ public sealed class EventNode : INotifyPropertyChanged
     private string _title = string.Empty;
     private string _details = string.Empty;
     private Brush _statusBrush = new SolidColorBrush(Colors.Transparent);
+    private bool _isExpanded = true;
 
     public string Time
     {
@@ -50,11 +51,18 @@ public sealed class EventNode : INotifyPropertyChanged
         set => SetProperty(ref _statusBrush, value);
     }
 
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set => SetProperty(ref _isExpanded, value);
+    }
+
     public ObservableCollection<EventNode> Children { get; } = new();
     internal Dictionary<string, EventNode> DescendantNodes { get; } =
         new(StringComparer.OrdinalIgnoreCase);
     internal string? ParentDeviceId { get; set; }
     internal string MergeKind { get; set; } = string.Empty;
+    internal string GroupTitle { get; set; } = string.Empty;
     internal DateTime LastUpdatedUtc { get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
