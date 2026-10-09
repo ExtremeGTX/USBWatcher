@@ -13,6 +13,7 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ inputs.release_tag }}
+  VELOPACK_VERSION: 1.2.161
 
 jobs:
   release:
@@ -27,7 +28,7 @@ jobs:
       - name: Validate tag and derive versions
         shell: pwsh
         run: |
-          if ($env:RELEASE_TAG -notmatch '^v(\d+)\.(\d+)\.(\d+)\.(\d+)$') {
+          if ($env:RELEASE_TAG -notmatch '^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
             throw "release_tag must use the format vX.Y.Z.A"
           }
 
@@ -40,13 +41,20 @@ jobs:
 
           "WINUI_VERSION=$winUiVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "WINFORMS_VERSION=$winFormsVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINUI_PACKAGE_VERSION=$winUiVersion.0" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINFORMS_PACKAGE_VERSION=$winFormsVersion.0" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "WINUI_ARCHIVE=USBWatcher_$winUiVersion.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "WINFORMS_ARCHIVE=USBWatcher_win32_$winFormsVersion.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINUI_SETUP=USBWatcher_$($winUiVersion)_Setup.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINFORMS_SETUP=USBWatcher_win32_$($winFormsVersion)_Setup.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+
+      - name: Install Velopack CLI
+        run: dotnet tool install vpk --tool-path .tools --version ${{ env.VELOPACK_VERSION }}
 
       - name: Restore WinUI
         run: dotnet restore src/USBWatcher.WinUI/USBWatcher.WinUI.csproj --runtime win-x64
@@ -90,11 +98,72 @@ jobs:
           Compress-Archive -Path artifacts/winui/* -DestinationPath "releases/$env:WINUI_ARCHIVE"
           Compress-Archive -Path artifacts/winforms/* -DestinationPath "releases/$env:WINFORMS_ARCHIVE"
 
+      - name: Download Velopack release history
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          & .\.tools\vpk.exe download github `
+            --repoUrl "https://github.com/${{ github.repository }}" `
+            --token $env:GH_TOKEN `
+            --channel winui `
+            --outputDir artifacts/velopack/winui
+
+          & .\.tools\vpk.exe download github `
+            --repoUrl "https://github.com/${{ github.repository }}" `
+            --token $env:GH_TOKEN `
+            --channel winforms `
+            --outputDir artifacts/velopack/winforms
+
+      - name: Package Velopack installers
+        shell: pwsh
+        run: |
+          & .\.tools\vpk.exe pack `
+            --packId USBWatcher.WinUI `
+            --packVersion $env:WINUI_PACKAGE_VERSION `
+            --packDir artifacts/winui `
+            --mainExe USBWatcher.WinUI.exe `
+            --packTitle USBWatcher `
+            --packAuthors ExtremeGTX `
+            --channel winui `
+            --runtime win-x64 `
+            --framework net8-x64-desktop `
+            --icon src/USBWatcher.WinUI/Assets/AppIcon.ico `
+            --outputDir artifacts/velopack/winui `
+            --noPortable
+
+          & .\.tools\vpk.exe pack `
+            --packId USBWatcher.WinForms `
+            --packVersion $env:WINFORMS_PACKAGE_VERSION `
+            --packDir artifacts/winforms `
+            --mainExe USBWatcher.exe `
+            --packTitle "USBWatcher WinForms" `
+            --packAuthors ExtremeGTX `
+            --channel winforms `
+            --runtime win-x64 `
+            --framework net8-x64-desktop `
+            --icon src/USBWatcher.WinForms/Resources/appicon.ico `
+            --outputDir artifacts/velopack/winforms `
+            --noPortable
+
+          $winUiSetup = Get-Item artifacts/velopack/winui/USBWatcher.WinUI-winui-Setup.exe -ErrorAction SilentlyContinue
+          $winFormsSetup = Get-Item artifacts/velopack/winforms/USBWatcher.WinForms-winforms-Setup.exe -ErrorAction SilentlyContinue
+          if ($null -eq $winUiSetup -or $null -eq $winFormsSetup) {
+            throw "Velopack did not produce both Setup executables"
+          }
+
+          Move-Item $winUiSetup.FullName "releases/$env:WINUI_SETUP"
+          Move-Item $winFormsSetup.FullName "releases/$env:WINFORMS_SETUP"
+          Copy-Item "artifacts/velopack/winui/USBWatcher.WinUI-$env:WINUI_PACKAGE_VERSION-winui-*.nupkg" releases/
+          Copy-Item "artifacts/velopack/winforms/USBWatcher.WinForms-$env:WINFORMS_PACKAGE_VERSION-winforms-*.nupkg" releases/
+          Copy-Item artifacts/velopack/winui/releases.winui.json releases/
+          Copy-Item artifacts/velopack/winforms/releases.winforms.json releases/
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: USBWatcher-${{ inputs.release_tag }}
-          path: releases/*.zip
+          path: releases/*
           if-no-files-found: error
 
       - name: Create tag and GitHub release
@@ -102,10 +171,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $notes = "WinUI version $env:WINUI_VERSION`nWinForms version $env:WINFORMS_VERSION"
-          gh release create $env:RELEASE_TAG `
-            "releases/$env:WINUI_ARCHIVE" `
-            "releases/$env:WINFORMS_ARCHIVE" `
+          $notes = @"
+          WinUI $env:WINUI_VERSION
+          - Recommended: $env:WINUI_SETUP
+          - Portable: $env:WINUI_ARCHIVE
+
+          WinForms $env:WINFORMS_VERSION
+          - Recommended: $env:WINFORMS_SETUP
+          - Portable: $env:WINFORMS_ARCHIVE
+          "@
+          $assets = Get-ChildItem releases -File | ForEach-Object FullName
+          gh release create $env:RELEASE_TAG $assets `
             --target $env:GITHUB_SHA `
             --title "USBWatcher $env:RELEASE_TAG" `
             --notes $notes

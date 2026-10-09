@@ -118,6 +118,19 @@
                     </controls:SettingsCard>
                 </StackPanel>
 
+                <StackPanel Spacing="6">
+                    <TextBlock Text="Updates" Style="{ThemeResource BodyStrongTextBlockStyle}" Margin="0,0,0,2" />
+                    <controls:SettingsCard x:Name="UpdateCard"
+                                           Header="Application updates"
+                                           Description="Check for a newer USBWatcher release.">
+                        <controls:SettingsCard.HeaderIcon>
+                            <FontIcon Glyph="&#xE895;" FontFamily="Segoe Fluent Icons" />
+                        </controls:SettingsCard.HeaderIcon>
+                        <Button x:Name="UpdateButton" Content="Check for updates"
+                                Click="UpdateButton_Click" />
+                    </controls:SettingsCard>
+                </StackPanel>
+
                 <TextBlock Text="Changes are saved automatically."
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                            HorizontalAlignment="Center" />

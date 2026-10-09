@@ -6,6 +6,7 @@ namespace USBWatcher
     {
         public Dictionary<string, string> FriendlyNames { get; set; } = new();
         public bool ListenToAllDevices { get; set; } = false;
+        public DateTimeOffset? LastUpdateCheckUtc { get; set; }
 
         private static readonly string SettingsPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

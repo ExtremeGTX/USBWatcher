@@ -21,6 +21,7 @@ public sealed class AppSettings
     public int WindowWidth { get; set; } = 560;
     public int WindowHeight { get; set; } = 880;
     public bool HasSavedWindowPlacement { get; set; }
+    public DateTimeOffset? LastUpdateCheckUtc { get; set; }
 }
 
 public static class SettingsStore

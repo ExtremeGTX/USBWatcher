@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="TaskScheduler" Version="2.12.1" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <ItemGroup>

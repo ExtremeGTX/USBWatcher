@@ -1,3 +1,5 @@
+using Velopack;
+
 namespace USBWatcher
 {
     internal static class Program
@@ -11,6 +13,10 @@ namespace USBWatcher
         [STAThread]
         static void Main(string[] args)
         {
+            VelopackApp.Build()
+                .SetAutoApplyOnStartup(false)
+                .Run();
+
             bool createdNew;
             _mutex = new Mutex(true, MutexName, out createdNew);
             if (!createdNew)

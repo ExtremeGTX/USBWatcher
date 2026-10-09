@@ -16,9 +16,12 @@ public sealed partial class MainWindow : Window
 {
     private readonly USBWatcherCore _watcher;
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
+    private readonly AppUpdateService _updateService;
     private SettingsWindow? _settingsWindow;
+    private AvailableAppUpdate? _pendingUpdate;
     private bool _exitRequested;
     private bool _isMainWindowVisible = true;
+    private bool _updateBusy;
 
     public ObservableCollection<DeviceRow> Devices { get; } = new();
     public ObservableCollection<EventNode> Events { get; } = new();
@@ -33,6 +36,7 @@ public sealed partial class MainWindow : Window
 
         ConfigureWindow();
         ApplyTheme();
+        _updateService = new AppUpdateService(USBWatcherEdition.WinUI);
         _trayIcon = CreateTrayIcon();
 
         DeviceMonitoringScope scope = SettingsStore.Current.ListenToAllDevices
@@ -44,6 +48,7 @@ public sealed partial class MainWindow : Window
 
         AppWindow.Closing += AppWindow_Closing;
         Closed += MainWindow_Closed;
+        Root.Loaded += MainWindow_Loaded;
         if (startMinimized)
         {
             Activated += HideAfterFirstActivation;
@@ -125,7 +130,24 @@ public sealed partial class MainWindow : Window
                 DispatcherQueue.TryEnqueue(ToggleWindowVisibility);
             }
         };
+        icon.BalloonTipClicked += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            ShowWindow();
+            PromptForPendingUpdate();
+        });
         return icon;
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        Root.Loaded -= MainWindow_Loaded;
+        if (_updateService.IsManagedInstallation &&
+            AppUpdateService.ShouldRunAutomaticCheck(
+                SettingsStore.Current.LastUpdateCheckUtc,
+                DateTimeOffset.UtcNow))
+        {
+            await CheckForUpdatesAsync(manual: false);
+        }
     }
 
     private void DeviceWatcher_DeviceChangeEvent(object? sender, DeviceChangeEventArgs e)
@@ -371,6 +393,140 @@ public sealed partial class MainWindow : Window
         }.ShowAsync();
     }
 
+    private async Task CheckForUpdatesAsync(bool manual)
+    {
+        if (_updateBusy || !_updateService.IsManagedInstallation)
+        {
+            return;
+        }
+
+        _updateBusy = true;
+        try
+        {
+            SettingsStore.Current.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+            SettingsStore.Save();
+
+            AvailableAppUpdate? update = await _updateService.CheckForUpdatesAsync();
+            if (update is null)
+            {
+                if (manual)
+                {
+                    await ShowMessageAsync("USBWatcher", "You already have the latest version.");
+                }
+                return;
+            }
+
+            if (!manual && !_isMainWindowVisible)
+            {
+                _pendingUpdate = update;
+                _trayIcon.ShowBalloonTip(
+                    5000,
+                    "USBWatcher update available",
+                    $"Version {update.Version} is ready to download. Click to review it.",
+                    System.Windows.Forms.ToolTipIcon.Info);
+                return;
+            }
+
+            await PromptAndInstallUpdateAsync(update);
+        }
+        catch (Exception ex)
+        {
+            if (manual)
+            {
+                await ShowErrorAsync("Update error", ex.Message);
+            }
+        }
+        finally
+        {
+            _updateBusy = false;
+        }
+    }
+
+    private async Task ShowMessageAsync(string title, string message)
+    {
+        await new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK"
+        }.ShowAsync();
+    }
+
+    private async Task PromptAndInstallUpdateAsync(AvailableAppUpdate update)
+    {
+        var prompt = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = "Update available",
+            Content = $"USBWatcher {update.Version} is available.",
+            PrimaryButtonText = "Update and restart",
+            CloseButtonText = "Later",
+            DefaultButton = ContentDialogButton.Primary
+        };
+        if (await prompt.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var progressBar = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Width = 320
+        };
+        var status = new TextBlock { Text = "Downloading update..." };
+        var progressContent = new StackPanel { Spacing = 12 };
+        progressContent.Children.Add(status);
+        progressContent.Children.Add(progressBar);
+        var progressDialog = new ContentDialog
+        {
+            XamlRoot = Root.XamlRoot,
+            Title = "Updating USBWatcher",
+            Content = progressContent
+        };
+        var showOperation = progressDialog.ShowAsync();
+
+        try
+        {
+            IProgress<int> progress = new Progress<int>(value =>
+            {
+                progressBar.Value = Math.Clamp(value, 0, 100);
+                status.Text = $"Downloading update... {value}%";
+            });
+            await _updateService.DownloadAsync(update, progress.Report);
+            progressDialog.Hide();
+            await showOperation;
+            _updateService.PrepareUpdateAndRestart(update, ExitApplication);
+        }
+        catch (Exception ex)
+        {
+            progressDialog.Hide();
+            await showOperation;
+            await ShowErrorAsync("Update error", ex.Message);
+        }
+    }
+
+    private async void PromptForPendingUpdate()
+    {
+        if (_pendingUpdate is null || _updateBusy)
+        {
+            return;
+        }
+
+        AvailableAppUpdate update = _pendingUpdate;
+        _pendingUpdate = null;
+        _updateBusy = true;
+        try
+        {
+            await PromptAndInstallUpdateAsync(update);
+        }
+        finally
+        {
+            _updateBusy = false;
+        }
+    }
+
     private void SettingsButton_Click(object sender, RoutedEventArgs e) => OpenSettings();
 
     private void OpenSettings()
@@ -381,10 +537,17 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _settingsWindow = new SettingsWindow();
+        _settingsWindow = new SettingsWindow(_updateService.IsManagedInstallation);
         _settingsWindow.SettingsApplied += SettingsWindow_SettingsApplied;
+        _settingsWindow.UpdateRequested += SettingsWindow_UpdateRequested;
         _settingsWindow.Closed += (_, _) => _settingsWindow = null;
         _settingsWindow.Activate();
+    }
+
+    private async void SettingsWindow_UpdateRequested(object? sender, EventArgs e)
+    {
+        ShowWindow();
+        await CheckForUpdatesAsync(manual: true);
     }
 
     private void SettingsWindow_SettingsApplied(object? sender, EventArgs e)
@@ -467,6 +630,8 @@ public sealed partial class MainWindow : Window
         {
             ScrollEventsToEnd();
         }
+
+        PromptForPendingUpdate();
     }
 
     private void HideWindow()

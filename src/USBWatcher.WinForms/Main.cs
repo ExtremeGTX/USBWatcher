@@ -13,14 +13,17 @@ namespace USBWatcher
         private bool MinimizeOnStart = false;
         private ToolStripMenuItem? externalUsbDevicesOnlyMenuItem;
         private ToolStripMenuItem? allDevicesMenuItem;
+        private readonly AppUpdateService updateService;
+        private AvailableAppUpdate? pendingUpdate;
+        private bool updateBusy;
 
         public Main(bool minimized)
         {
             InitializeComponent();
             Icon = Properties.Resources.appicon;
-            InitializeTrayIcon();
-
             Settings.Load();
+            updateService = new AppUpdateService(USBWatcherEdition.WinForms);
+            InitializeTrayIcon();
             InitializeDeviceMonitoringMenu();
             DeviceMonitoringScope monitoringScope = Settings.Current.ListenToAllDevices
                 ? DeviceMonitoringScope.AllDevices
@@ -148,11 +151,19 @@ namespace USBWatcher
         }
 
         #region "Form events"
-        private void Main_FormShown(object sender, EventArgs e)
+        private async void Main_FormShown(object sender, EventArgs e)
         {
             if (MinimizeOnStart)
             {
                 this.Hide();
+            }
+
+            if (updateService.IsManagedInstallation &&
+                AppUpdateService.ShouldRunAutomaticCheck(
+                    Settings.Current.LastUpdateCheckUtc,
+                    DateTimeOffset.UtcNow))
+            {
+                await CheckForUpdatesAsync(manual: false);
             }
         }
 
@@ -202,6 +213,11 @@ namespace USBWatcher
                 Visible = true,
             };
             trayIcon.Click += TrayIcon_Click;
+            trayIcon.BalloonTipClicked += (_, _) =>
+            {
+                ShowFromTray();
+                PromptForPendingUpdate();
+            };
             trayIcon.ContextMenuStrip = contextMenuStrip;
         }
 
@@ -242,10 +258,36 @@ namespace USBWatcher
                     this.Hide();
                     break;
                 case false:
-                    this.SetDesktopLocation(MousePosition.X - this.Width / 2, MousePosition.Y - this.Height - 20);
-                    this.Show();
-                    this.Activate();
+                    ShowFromTray();
+                    PromptForPendingUpdate();
                     break;
+            }
+        }
+
+        private void ShowFromTray()
+        {
+            this.SetDesktopLocation(MousePosition.X - this.Width / 2, MousePosition.Y - this.Height - 20);
+            this.Show();
+            this.Activate();
+        }
+
+        private async void PromptForPendingUpdate()
+        {
+            if (pendingUpdate is null || updateBusy)
+            {
+                return;
+            }
+
+            AvailableAppUpdate update = pendingUpdate;
+            pendingUpdate = null;
+            updateBusy = true;
+            try
+            {
+                await PromptAndInstallUpdateAsync(update);
+            }
+            finally
+            {
+                updateBusy = false;
             }
         }
 
@@ -338,6 +380,11 @@ namespace USBWatcher
             var openSettingsFileMenuItem = new ToolStripMenuItem("Open settings file");
             openSettingsFileMenuItem.Click += settingsToolStripMenuItem_Click;
 
+            var updateMenuItem = new ToolStripMenuItem(updateService.IsManagedInstallation
+                ? "Check for updates..."
+                : "View latest release...");
+            updateMenuItem.Click += updateToolStripMenuItem_Click;
+
             externalUsbDevicesOnlyMenuItem = new ToolStripMenuItem("External USB devices only") { CheckOnClick = true };
             allDevicesMenuItem = new ToolStripMenuItem("All devices") { CheckOnClick = true };
 
@@ -352,6 +399,7 @@ namespace USBWatcher
             });
 
             settingsToolStripMenuItem.DropDownItems.Add(openSettingsFileMenuItem);
+            settingsToolStripMenuItem.DropDownItems.Add(updateMenuItem);
             settingsToolStripMenuItem.DropDownItems.Add(new ToolStripSeparator());
             settingsToolStripMenuItem.DropDownItems.Add(listenForMenuItem);
             UpdateDeviceMonitoringMenuChecks();
@@ -395,6 +443,165 @@ namespace USBWatcher
         private void clearLogsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             tvwEvents.Nodes.Clear();
+        }
+
+        private async void updateToolStripMenuItem_Click(object? sender, EventArgs e)
+        {
+            if (!updateService.IsManagedInstallation)
+            {
+                Process.Start(new ProcessStartInfo(AppUpdateService.ReleasesUrl) { UseShellExecute = true });
+                return;
+            }
+
+            await CheckForUpdatesAsync(manual: true);
+        }
+
+        private async System.Threading.Tasks.Task CheckForUpdatesAsync(bool manual)
+        {
+            if (updateBusy || !updateService.IsManagedInstallation)
+            {
+                return;
+            }
+
+            updateBusy = true;
+            try
+            {
+                Settings.Current.LastUpdateCheckUtc = DateTimeOffset.UtcNow;
+                Settings.Save();
+
+                AvailableAppUpdate? update = await updateService.CheckForUpdatesAsync();
+                if (update is null)
+                {
+                    if (manual)
+                    {
+                        MessageBox.Show("You already have the latest version.", "USBWatcher",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    return;
+                }
+
+                if (!manual && !Visible)
+                {
+                    pendingUpdate = update;
+                    trayIcon?.ShowBalloonTip(
+                        5000,
+                        "USBWatcher update available",
+                        $"Version {update.Version} is ready to download. Click to review it.",
+                        ToolTipIcon.Info);
+                    return;
+                }
+
+                await PromptAndInstallUpdateAsync(update);
+            }
+            catch (Exception ex)
+            {
+                if (manual)
+                {
+                    MessageBox.Show($"USBWatcher could not check for updates.\n\n{ex.Message}",
+                        "Update error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            finally
+            {
+                updateBusy = false;
+            }
+        }
+
+        private async System.Threading.Tasks.Task PromptAndInstallUpdateAsync(AvailableAppUpdate update)
+        {
+            if (!ShowUpdatePrompt(update))
+            {
+                return;
+            }
+
+            using var progressDialog = new Form
+            {
+                Text = "Updating USBWatcher",
+                ClientSize = new Size(360, 86),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                StartPosition = FormStartPosition.CenterParent,
+                ControlBox = false
+            };
+            var statusLabel = new Label
+            {
+                Text = "Downloading update...",
+                AutoSize = true,
+                Location = new Point(16, 14)
+            };
+            var progressBar = new ProgressBar
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Width = 328,
+                Height = 20,
+                Location = new Point(16, 44)
+            };
+            progressDialog.Controls.Add(statusLabel);
+            progressDialog.Controls.Add(progressBar);
+            progressDialog.Show(this);
+
+            try
+            {
+                IProgress<int> progress = new Progress<int>(value =>
+                {
+                    progressBar.Value = Math.Clamp(value, 0, 100);
+                    statusLabel.Text = $"Downloading update... {value}%";
+                });
+                await updateService.DownloadAsync(update, progress.Report);
+                progressDialog.Close();
+                updateService.PrepareUpdateAndRestart(update, Application.Exit);
+            }
+            catch (Exception ex)
+            {
+                progressDialog.Close();
+                MessageBox.Show($"USBWatcher could not install the update.\n\n{ex.Message}",
+                    "Update error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private bool ShowUpdatePrompt(AvailableAppUpdate update)
+        {
+            using var dialog = new Form
+            {
+                Text = "Update available",
+                ClientSize = new Size(430, 132),
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                StartPosition = FormStartPosition.CenterParent,
+                Icon = Icon
+            };
+            var message = new Label
+            {
+                Text = $"USBWatcher {update.Version} is available.",
+                AutoSize = true,
+                Location = new Point(20, 22)
+            };
+            var updateButton = new Button
+            {
+                Text = "Update and restart",
+                DialogResult = DialogResult.OK,
+                AutoSize = true,
+                Location = new Point(204, 82)
+            };
+            var laterButton = new Button
+            {
+                Text = "Later",
+                DialogResult = DialogResult.Cancel,
+                AutoSize = true,
+                Location = new Point(344, 82)
+            };
+            dialog.Controls.Add(message);
+            dialog.Controls.Add(updateButton);
+            dialog.Controls.Add(laterButton);
+            dialog.AcceptButton = updateButton;
+            dialog.CancelButton = laterButton;
+
+            return dialog.ShowDialog(this) == DialogResult.OK;
         }
 
         private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
