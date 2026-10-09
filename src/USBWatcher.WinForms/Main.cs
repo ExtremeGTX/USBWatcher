@@ -291,6 +291,18 @@ namespace USBWatcher
             }
         }
 
+        internal void ShowFromExternalLaunch()
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+
+            Show();
+            Activate();
+            BringToFront();
+        }
+
         private void stripItemExit_Click(object? sender, EventArgs e)
         {
             usb_watcher.Dispose();
