@@ -1,74 +1,111 @@
-# refer to https://github.com/microsoft/github-actions-for-desktop-apps
-
 name: Create Release
 
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+'
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag in vX.Y.Z.A format (WinUI X.Y, WinForms Z.A)
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 env:
-  RELEASE_NUMBER: ${{github.ref_name}}
+  RELEASE_TAG: ${{ inputs.release_tag }}
 
 jobs:
-
-  build:
-
-    strategy:
-      matrix:
-        configuration: [Release]
-
+  release:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    # Install the .NET Core workload
-    - name: Install .NET Framework
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
+      - name: Validate tag and derive versions
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v(\d+)\.(\d+)\.(\d+)\.(\d+)$') {
+            throw "release_tag must use the format vX.Y.Z.A"
+          }
 
-    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
-    - name: Setup MSBuild.exe
-      uses: microsoft/setup-msbuild@v1.1.1
+          $winUiVersion = "$($Matches[1]).$($Matches[2])"
+          $winFormsVersion = "$($Matches[3]).$($Matches[4])"
 
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1.1.1
+          if (git tag --list $env:RELEASE_TAG) {
+            throw "Tag $env:RELEASE_TAG already exists"
+          }
 
-    - name: Restore NuGet packages
-      run: nuget restore src/USBWatcher.sln
+          "WINUI_VERSION=$winUiVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINFORMS_VERSION=$winFormsVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINUI_ARCHIVE=USBWatcher_$winUiVersion.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINFORMS_ARCHIVE=USBWatcher_win32_$winFormsVersion.zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-    - name: Build the solution
-      run: msbuild src/USBWatcher.sln /property:Configuration=${{ matrix.configuration }}
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    - name: Cleanup output dir
-      run: |
-        rm .\src\USBWatcher.WinForms\bin\${{ matrix.configuration }}\net8.0-windows7.0\*.pdb
+      - name: Restore WinUI
+        run: dotnet restore src/USBWatcher.WinUI/USBWatcher.WinUI.csproj --runtime win-x64
 
-    - name: Create zip archieve
-      uses: thedoctor0/zip-release@main
-      with:
-        type: 'zip'
-        path: .\src\USBWatcher.WinForms\bin\${{ matrix.configuration }}\net8.0-windows7.0\*
-        filename: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
-        exclusions: '*.git* /*node_modules/* .editorconfig'
+      - name: Restore WinForms
+        run: dotnet restore src/USBWatcher.WinForms/USBWatcher.csproj --runtime win-x64
 
-    - name: Output results
-      run: |
-          Get-ChildItem -Recurse
+      - name: Publish WinUI
+        shell: pwsh
+        run: |
+          dotnet publish src/USBWatcher.WinUI/USBWatcher.WinUI.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained false `
+            --no-restore `
+            --output artifacts/winui `
+            -p:Version=$env:WINUI_VERSION `
+            -p:AssemblyVersion="$env:WINUI_VERSION.0.0" `
+            -p:FileVersion="$env:WINUI_VERSION.0.0" `
+            -p:WindowsPackageType=None
 
-    # Release steps only run on tag push
-    - name: Upload Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: ncipollo/release-action@v1.11.1
-      with:
-        tag: ${{ env.RELEASE_NUMBER }}
-        commit: 'main'
-        artifacts: 'USBWatcher-${{ env.RELEASE_NUMBER }}.zip'
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish WinForms
+        shell: pwsh
+        run: |
+          dotnet publish src/USBWatcher.WinForms/USBWatcher.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained false `
+            --no-restore `
+            --output artifacts/winforms `
+            -p:Version=$env:WINFORMS_VERSION `
+            -p:AssemblyVersion="$env:WINFORMS_VERSION.0.0" `
+            -p:FileVersion="$env:WINFORMS_VERSION.0.0"
+
+      - name: Create ZIP archives
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path releases -Force | Out-Null
+          Remove-Item artifacts/winui/*.pdb -Force -ErrorAction SilentlyContinue
+          Remove-Item artifacts/winforms/*.pdb -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path artifacts/winui/* -DestinationPath "releases/$env:WINUI_ARCHIVE"
+          Compress-Archive -Path artifacts/winforms/* -DestinationPath "releases/$env:WINFORMS_ARCHIVE"
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: USBWatcher-${{ inputs.release_tag }}
+          path: releases/*.zip
+          if-no-files-found: error
+
+      - name: Create tag and GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = "WinUI version $env:WINUI_VERSION`nWinForms version $env:WINFORMS_VERSION"
+          gh release create $env:RELEASE_TAG `
+            "releases/$env:WINUI_ARCHIVE" `
+            "releases/$env:WINFORMS_ARCHIVE" `
+            --target $env:GITHUB_SHA `
+            --title "USBWatcher $env:RELEASE_TAG" `
+            --notes $notes
