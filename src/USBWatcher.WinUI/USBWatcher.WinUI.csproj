@@ -16,6 +16,9 @@
     <RootNamespace>USBWatcher.WinUI</RootNamespace>
     <AssemblyName>USBWatcher.WinUI</AssemblyName>
     <Title>USBWatcher</Title>
+    <VersionPrefix>2.0</VersionPrefix>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <Company>ExtremeGTX</Company>
     <Copyright>Mohamed ElShahawi</Copyright>
   </PropertyGroup>
