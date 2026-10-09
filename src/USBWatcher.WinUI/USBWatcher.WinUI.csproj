@@ -21,12 +21,14 @@
     <FileVersion>2.0.0.0</FileVersion>
     <Company>ExtremeGTX</Company>
     <Copyright>Mohamed ElShahawi</Copyright>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.WinUI.Controls.SettingsControls" Version="8.2.251219" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
     <PackageReference Include="TaskScheduler" Version="2.12.1" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
     <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
 

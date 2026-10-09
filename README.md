@@ -54,9 +54,14 @@ USB Watcher is a simple tool mainly to rename USB Serial ports on Windows
   <a href="https://github.com/extremegtx/USBWatcher/releases/latest/" style="vertical-align: middle;">Download Latest Release</a>
 </div>
 
+Each release provides WinUI and WinForms editions in two formats:
+
+- **Setup (recommended):** per-user installation with daily update checks. Updates are downloaded and applied only after confirmation.
+- **Portable ZIP:** extract and run without installation. Portable builds never check for updates automatically; use **View latest release** to update manually.
+
 ## Usage
 
-Just run `USBWatcher.exe` no installation is needed.
+Run the downloaded Setup, or extract a portable ZIP and launch its executable.
 
 > [!NOTE]
 > Administrator privilege needed to access devices registry paths.

@@ -2,6 +2,9 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.Diagnostics;
+using System.Reflection;
+using USBWatcher.Core;
 using Windows.Graphics;
 
 namespace USBWatcher.WinUI;
@@ -9,11 +12,14 @@ namespace USBWatcher.WinUI;
 public sealed partial class SettingsWindow : Window
 {
     private bool _loading = true;
+    private readonly bool _managedUpdates;
 
     public event EventHandler? SettingsApplied;
+    public event EventHandler? UpdateRequested;
 
-    public SettingsWindow()
+    public SettingsWindow(bool managedUpdates)
     {
+        _managedUpdates = managedUpdates;
         InitializeComponent();
         Title = "USBWatcher Settings";
         SystemBackdrop = new MicaBackdrop();
@@ -30,7 +36,29 @@ public sealed partial class SettingsWindow : Window
 
         Root.ActualThemeChanged += Root_ActualThemeChanged;
         LoadValues();
+        ConfigureUpdateCard();
         _loading = false;
+    }
+
+    private void ConfigureUpdateCard()
+    {
+        Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+        string versionText = version is null ? string.Empty : $" Current version: {version.Major}.{version.Minor}.";
+        UpdateCard.Description = _managedUpdates
+            ? $"Installed with Velopack.{versionText}"
+            : $"Portable edition; updates are installed manually.{versionText}";
+        UpdateButton.Content = _managedUpdates ? "Check for updates" : "View latest release";
+    }
+
+    private void UpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_managedUpdates)
+        {
+            UpdateRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(AppUpdateService.ReleasesUrl) { UseShellExecute = true });
     }
 
     private void LoadValues()
