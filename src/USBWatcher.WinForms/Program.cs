@@ -1,11 +1,15 @@
 using Velopack;
+using USBWatcher.Core;
 
 namespace USBWatcher
 {
     internal static class Program
     {
         private static readonly string MutexName = "Global\\USBWatcher_SingleInstance";
+        private static readonly string ShowWindowEventName = "Global\\USBWatcher_ShowWindow";
         private static Mutex? _mutex;
+        private static EventWaitHandle? _showWindowEvent;
+        private static RegisteredWaitHandle? _showWindowRegistration;
 
         /// <summary>
         ///  The main entry point for the application.
@@ -19,11 +23,16 @@ namespace USBWatcher
 
             bool createdNew;
             _mutex = new Mutex(true, MutexName, out createdNew);
+            _showWindowEvent = new EventWaitHandle(
+                false,
+                EventResetMode.AutoReset,
+                ShowWindowEventName);
             if (!createdNew)
             {
-                // Another instance is already running
-                MessageBox.Show("USBWatcher is already running.", "USBWatcher",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SingleInstanceActivation.AllowExistingInstanceToTakeForeground();
+                _showWindowEvent.Set();
+                _showWindowEvent.Dispose();
+                _mutex.Dispose();
                 return;
             }
 
@@ -39,11 +48,28 @@ namespace USBWatcher
                 {
                     minimized = true;
                 }
-                Application.Run(new Main(minimized));
+                using var mainWindow = new Main(minimized);
+                _ = mainWindow.Handle;
+                _showWindowRegistration = ThreadPool.RegisterWaitForSingleObject(
+                    _showWindowEvent,
+                    (_, _) =>
+                    {
+                        if (!mainWindow.IsDisposed && mainWindow.IsHandleCreated)
+                        {
+                            mainWindow.BeginInvoke(new Action(mainWindow.ShowFromExternalLaunch));
+                        }
+                    },
+                    null,
+                    Timeout.Infinite,
+                    executeOnlyOnce: false);
+
+                Application.Run(mainWindow);
             }
             finally
             {
                 // Release the mutex when the application exits
+                _showWindowRegistration?.Unregister(null);
+                _showWindowEvent?.Dispose();
                 _mutex?.ReleaseMutex();
                 _mutex?.Dispose();
             }

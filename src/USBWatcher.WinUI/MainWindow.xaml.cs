@@ -634,6 +634,8 @@ public sealed partial class MainWindow : Window
         PromptForPendingUpdate();
     }
 
+    internal void ShowFromExternalLaunch() => ShowWindow();
+
     private void HideWindow()
     {
         AppWindow.Hide();
