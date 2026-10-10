@@ -179,6 +179,9 @@ jobs:
           WinForms $env:WINFORMS_VERSION
           - Recommended: $env:WINFORMS_SETUP
           - Portable: $env:WINFORMS_ARCHIVE
+
+          The .nupkg and releases.*.json assets are used by automatic updates.
+          Users do not need to download them manually.
           "@
           $assets = Get-ChildItem releases -File | ForEach-Object FullName
           gh release create $env:RELEASE_TAG $assets `
