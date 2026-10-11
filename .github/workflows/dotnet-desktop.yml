@@ -76,6 +76,10 @@ jobs:
             -p:FileVersion="$env:WINUI_VERSION.0.0" `
             -p:WindowsPackageType=None
 
+          if (-not (Test-Path -LiteralPath artifacts/winui/USBWatcher.WinUI.pri)) {
+            throw "WinUI publish is missing USBWatcher.WinUI.pri"
+          }
+
       - name: Publish WinForms
         shell: pwsh
         run: |
@@ -137,7 +141,7 @@ jobs:
             --packVersion $env:WINFORMS_PACKAGE_VERSION `
             --packDir artifacts/winforms `
             --mainExe USBWatcher.exe `
-            --packTitle "USBWatcher WinForms" `
+            --packTitle USBWatcher `
             --packAuthors ExtremeGTX `
             --channel winforms `
             --runtime win-x64 `
