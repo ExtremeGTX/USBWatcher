@@ -63,8 +63,9 @@ Each release provides WinUI and WinForms editions in two formats:
 
 Run the downloaded Setup, or extract a portable ZIP and launch its executable.
 
-> [!NOTE]
-> Administrator privilege needed to access devices registry paths.
+Listing and monitoring devices works without administrator privileges. Windows
+can reject an attempt to rename a protected device registry value; USBWatcher
+reports that error instead of requiring elevation for the entire application.
 
 ### WinUI 3 frontend
 
@@ -77,8 +78,22 @@ dotnet build src\USBWatcher.WinUI\USBWatcher.WinUI.csproj -c Release
 ```
 
 The executable is produced under
-`src\USBWatcher.WinUI\bin\Release\net8.0-windows10.0.19041.0\win-x64` when the
-project is built directly. Run it as administrator, as with the WinForms app.
+`src\USBWatcher.WinUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64` when
+the project is built directly.
+
+### Test release packages locally
+
+Build the same portable ZIPs and Velopack Setup executables used by the release
+workflow without creating a tag or GitHub release:
+
+```powershell
+pwsh -NoProfile -File .\scripts\build-local-release.ps1 -ReleaseTag v2.1.1.8
+```
+
+The files are written to `artifacts\local-release\release`. Run either Setup
+normally, not as administrator. Local packages use a prerelease version suffix
+so a later stable build can replace them; uninstall them before testing the
+final release.
 
 ## Built With
 
