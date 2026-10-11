@@ -44,4 +44,21 @@
     <Content Include="Assets\Usb96.png" />
     <Content Include="Assets\Usb100.png" />
   </ItemGroup>
+
+  <!--
+    Windows App SDK currently generates the PRI for unpackaged WinUI apps but
+    does not add it to dotnet publish output. Without it, the published app
+    crashes while loading its compiled XAML resources.
+  -->
+  <Target Name="IncludeUnpackagedPriInPublish"
+          BeforeTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="$(GenerateProjectPriFile)">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(ProjectPriFullPath)"
+                             Condition="Exists('$(ProjectPriFullPath)')">
+        <RelativePath>$(ProjectPriFileName)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 </Project>
