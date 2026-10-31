@@ -1,0 +1,170 @@
+{
+    "version": "2.0.0",
+    "options": {
+        "cwd": "${workspaceFolder}"
+    },
+    "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+    },
+    "tasks": [
+        {
+            "label": "Restore",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "restore",
+                "src/USBWatcher.sln"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build: All (Debug)",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "src/USBWatcher.sln",
+                "--configuration",
+                "Debug",
+                "-m:1",
+                "-p:UseSharedCompilation=false"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build: All (Release)",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "src/USBWatcher.sln",
+                "--configuration",
+                "Release",
+                "-m:1",
+                "-p:UseSharedCompilation=false"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build: WinUI (Debug)",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "src/USBWatcher.WinUI/USBWatcher.WinUI.csproj",
+                "--configuration",
+                "Debug",
+                "-p:Platform=x64",
+                "-m:1",
+                "-p:UseSharedCompilation=false"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Run: WinUI (Administrator)",
+            "detail": "Build Debug and launch the application through UAC.",
+            "type": "process",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Start-Process -FilePath $env:USBWATCHER_TASK_EXE -WorkingDirectory (Split-Path -Parent $env:USBWATCHER_TASK_EXE) -Verb RunAs -ErrorAction Stop"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "USBWATCHER_TASK_EXE": "${workspaceFolder}\\src\\USBWatcher.WinUI\\bin\\x64\\Debug\\net8.0-windows10.0.19041.0\\win-x64\\USBWatcher.WinUI.exe"
+                }
+            },
+            "dependsOn": "Build: WinUI (Debug)",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build: WinForms (Debug)",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "src/USBWatcher.WinForms/USBWatcher.csproj",
+                "--configuration",
+                "Debug",
+                "-m:1",
+                "-p:UseSharedCompilation=false"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Run: WinForms (Administrator)",
+            "detail": "Build Debug and launch the application through UAC.",
+            "type": "process",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "Start-Process -FilePath $env:USBWATCHER_TASK_EXE -WorkingDirectory (Split-Path -Parent $env:USBWATCHER_TASK_EXE) -Verb RunAs -ErrorAction Stop"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "USBWATCHER_TASK_EXE": "${workspaceFolder}\\src\\USBWatcher.WinForms\\bin\\Debug\\net8.0-windows7.0\\USBWatcher.exe"
+                }
+            },
+            "dependsOn": "Build: WinForms (Debug)",
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "clean",
+                "src/USBWatcher.sln",
+                "--configuration",
+                "${input:configuration}",
+                "-m:1"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Package: Local release",
+            "detail": "Recreates artifacts/local-release with both Setup installers and portable ZIPs. Does not publish to GitHub.",
+            "type": "process",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-File",
+                "${workspaceFolder}/scripts/build-local-release.ps1",
+                "-ReleaseTag",
+                "${input:releaseTag}"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "configuration",
+            "type": "pickString",
+            "description": "Configuration to clean",
+            "options": [
+                "Debug",
+                "Release"
+            ],
+            "default": "Debug"
+        },
+        {
+            "id": "releaseTag",
+            "type": "promptString",
+            "description": "Local package version: vX.Y.Z.A (X.Y = WinUI, Z.A = WinForms)",
+            "default": "v2.1.1.8"
+        }
+    ]
+}
