@@ -1,5 +1,6 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using USBWatcher.Core;
 using Velopack;
 
 namespace USBWatcher.WinUI;
@@ -12,6 +13,11 @@ internal static class Program
         VelopackApp.Build()
             .SetAutoApplyOnStartup(false)
             .Run();
+
+        if (!ElevationHelper.EnsureRunningAsAdministrator())
+        {
+            return;
+        }
 
         WinRT.ComWrappersSupport.InitializeComWrappers();
         Application.Start(initializationParams =>
