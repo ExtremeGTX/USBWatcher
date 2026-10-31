@@ -69,23 +69,25 @@ namespace USBWatcher
 
         public static string? GetStoredDeviceName(string vid, string pid, string? sn)
         {
-            string key = $"{vid}_{pid}";
-            if (string.IsNullOrEmpty(sn) == false)
-            {
-                key += $"_{sn}";
-            }
-            return Current.FriendlyNames.GetValueOrDefault(key);
+            return Current.FriendlyNames.GetValueOrDefault(GetDeviceKey(vid, pid, sn));
         }
 
         public static bool SaveDeviceName(string vid, string pid, string? sn, string friendlyName)
         {
-            string key = $"{vid}_{pid}";
-            if (string.IsNullOrEmpty(sn) == false)
-            {
-                key += $"_{sn}";
-            }
-            Current.FriendlyNames[key] = friendlyName;
+            Current.FriendlyNames[GetDeviceKey(vid, pid, sn)] = friendlyName;
             return Save();
+        }
+
+        public static bool RemoveDeviceName(string vid, string pid, string? sn)
+        {
+            Current.FriendlyNames.Remove(GetDeviceKey(vid, pid, sn));
+            return Save();
+        }
+
+        private static string GetDeviceKey(string vid, string pid, string? sn)
+        {
+            string key = $"{vid}_{pid}";
+            return string.IsNullOrEmpty(sn) ? key : $"{key}_{sn}";
         }
 
         public static string GetSettingsPath()

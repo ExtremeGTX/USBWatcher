@@ -25,6 +25,7 @@ namespace USBWatcher
             updateService = new AppUpdateService(USBWatcherEdition.WinForms);
             InitializeTrayIcon();
             InitializeDeviceMonitoringMenu();
+            InitializeDeviceContextMenu();
             DeviceMonitoringScope monitoringScope = Settings.Current.ListenToAllDevices
                 ? DeviceMonitoringScope.AllDevices
                 : DeviceMonitoringScope.ExternalUsbDevicesOnly;
@@ -144,6 +145,7 @@ namespace USBWatcher
                 }
 
                 ListViewItem lvi = new ListViewItem(DevInfo);
+                lvi.Tag = usbdev;
                 lsvDevices.Items.Add(lvi);
             }
 
@@ -631,6 +633,84 @@ namespace USBWatcher
         #endregion
 
         #region "Devices list"
+        private void InitializeDeviceContextMenu()
+        {
+            var contextMenu = new ContextMenuStrip();
+            var renameMenuItem = new ToolStripMenuItem("Rename");
+            var restoreMenuItem = new ToolStripMenuItem("Restore default name");
+
+            renameMenuItem.Click += (_, _) => BeginRenameSelectedDevice();
+            restoreMenuItem.Click += (_, _) => RestoreSelectedDeviceName();
+            contextMenu.Items.AddRange(new ToolStripItem[] { renameMenuItem, restoreMenuItem });
+            contextMenu.Opening += (_, e) =>
+            {
+                bool hasSelection = lsvDevices.SelectedItems.Count == 1;
+                renameMenuItem.Enabled = hasSelection;
+                restoreMenuItem.Enabled = hasSelection &&
+                    lsvDevices.SelectedItems[0].Tag is UsbDeviceRecord device &&
+                    !string.IsNullOrWhiteSpace(Settings.GetStoredDeviceName(
+                        device.VID, device.PID, GetDeviceIdentity(device)));
+                e.Cancel = !hasSelection;
+            };
+
+            lsvDevices.ContextMenuStrip = contextMenu;
+            lsvDevices.MouseDown += (_, e) =>
+            {
+                if (e.Button != MouseButtons.Right)
+                {
+                    return;
+                }
+
+                ListViewItem? item = lsvDevices.GetItemAt(e.X, e.Y);
+                lsvDevices.SelectedIndices.Clear();
+                if (item is not null)
+                {
+                    item.Selected = true;
+                    item.Focused = true;
+                }
+            };
+        }
+
+        private static string GetDeviceIdentity(UsbDeviceRecord device) =>
+            string.IsNullOrEmpty(device.SerialNumber) ? device.MI : device.SerialNumber;
+
+        private void BeginRenameSelectedDevice()
+        {
+            if (lsvDevices.SelectedItems.Count != 1)
+            {
+                return;
+            }
+
+            ListViewItem item = lsvDevices.SelectedItems[0];
+            item.Text = Regex.Replace(item.Text, @"\s*\(COM[0-9]{1,3}\)$", string.Empty,
+                RegexOptions.IgnoreCase).Trim();
+            item.BeginEdit();
+        }
+
+        private void RestoreSelectedDeviceName()
+        {
+            if (lsvDevices.SelectedItems.Count != 1 ||
+                lsvDevices.SelectedItems[0].Tag is not UsbDeviceRecord device)
+            {
+                return;
+            }
+
+            Settings.RemoveDeviceName(device.VID, device.PID, GetDeviceIdentity(device));
+            try
+            {
+                usb_watcher.SetUSBDeviceFriendlyName(device.PortName, device.DeviceName);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"The saved name was removed, but Windows rejected the device registry rename.\n\n{ex.Message}",
+                    "Rename error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            RefreshUSBPortsList();
+        }
+
         private void lsvDevices_AfterLabelEdit(object sender, LabelEditEventArgs e)
         {
             if (e.Label == null || e.Label == "")
@@ -658,7 +738,7 @@ namespace USBWatcher
                     newFriendlyName = Regex.Replace(newFriendlyName, @"\(COM[0-9]{1,3}\)$", "").Trim();
                 }
 
-                if (usb_watcher.SetUSBDeviceFriendlyName(portName, e.Label))
+                if (usb_watcher.SetUSBDeviceFriendlyName(portName, newFriendlyName))
                 {
                     Settings.SaveDeviceName(VID, PID, SN, newFriendlyName);
                 }
@@ -671,15 +751,7 @@ namespace USBWatcher
         {
             if (e.KeyData == Keys.F2 && lsvDevices.SelectedItems.Count > 0)
             {
-                /* Make sure the user can't edit COMx part in friendlyname
-                 * COMx is automatically appended by USBWatcher SetUSBDeviceFriendlyName
-                 */
-                if (Regex.IsMatch(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$"))
-                {
-                    lsvDevices.SelectedItems[0].Text = Regex.Replace(lsvDevices.SelectedItems[0].Text, @"\(COM[0-9]{1,3}\)$", "").Trim();
-                }
-
-                lsvDevices.SelectedItems[0].BeginEdit();
+                BeginRenameSelectedDevice();
             }
         }
 
