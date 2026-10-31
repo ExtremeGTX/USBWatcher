@@ -21,6 +21,11 @@ namespace USBWatcher
                 .SetAutoApplyOnStartup(false)
                 .Run();
 
+            if (!ElevationHelper.EnsureRunningAsAdministrator())
+            {
+                return;
+            }
+
             bool createdNew;
             _mutex = new Mutex(true, MutexName, out createdNew);
             _showWindowEvent = new EventWaitHandle(
