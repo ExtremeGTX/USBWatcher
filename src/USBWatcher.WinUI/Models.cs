@@ -15,6 +15,7 @@ public sealed class DeviceRow
     public string Vid { get; set; } = string.Empty;
     public string Pid { get; set; } = string.Empty;
     public string Identity => string.IsNullOrWhiteSpace(SerialNumber) ? string.Empty : SerialNumber;
+    public bool HasCustomName => !string.IsNullOrWhiteSpace(Alias);
 }
 
 public sealed class EventNode : INotifyPropertyChanged

@@ -347,16 +347,29 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        await RenameDeviceAsync(device);
+    }
+
+    private async void RenameDevice_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuFlyoutItem { Tag: DeviceRow device })
+        {
+            await RenameDeviceAsync(device);
+        }
+    }
+
+    private async Task RenameDeviceAsync(DeviceRow device)
+    {
         var aliasBox = new TextBox
         {
             Text = device.Alias,
-            Header = $"Alias for {device.Name}",
-            PlaceholderText = "Friendly alias"
+            Header = $"Name for {device.Name}",
+            PlaceholderText = "Device name"
         };
         var dialog = new ContentDialog
         {
             XamlRoot = Root.XamlRoot,
-            Title = "Edit device alias",
+            Title = "Rename device",
             Content = aliasBox,
             PrimaryButtonText = "Save",
             CloseButtonText = "Cancel",
@@ -378,6 +391,25 @@ public sealed partial class MainWindow : Window
         catch (Exception ex)
         {
             await ShowErrorAsync("The alias was saved, but Windows rejected the device registry rename.", ex.Message);
+        }
+        RefreshDevices();
+    }
+
+    private async void RestoreDeviceName_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuFlyoutItem { Tag: DeviceRow device })
+        {
+            return;
+        }
+
+        SettingsStore.SetAlias(device.Vid, device.Pid, device.SerialNumber, string.Empty);
+        try
+        {
+            _watcher.SetUSBDeviceFriendlyName(device.Port, device.Name);
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync("The saved name was removed, but Windows rejected the device registry rename.", ex.Message);
         }
         RefreshDevices();
     }
