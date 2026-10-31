@@ -14,6 +14,91 @@ namespace USBWatcher.WinUI;
 
 public sealed partial class MainWindow : Window
 {
+    private int _deviceSortColumn = -1;
+    private bool _deviceSortDescending;
+    private bool _deviceColumnsResized;
+
+    private void DeviceViewport_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (_deviceColumnsResized || DeviceHeaders is null || e.NewSize.Width <= 64)
+            return;
+
+        // Preserve the original 2*:3*:1*:1.6* proportions until the user resizes.
+        // Pixel widths keep header and row columns aligned when the list scrolls.
+        double[] weights = { 2, 3, 1, 1.6 };
+        double available = e.NewSize.Width - 64; // Padding and column spacing.
+        for (int index = 0; index < weights.Length; index++)
+            DeviceHeaders.ColumnDefinitions[index].Width = new GridLength(available * weights[index] / 7.6);
+        DeviceTable.Width = e.NewSize.Width;
+    }
+
+    private void DeviceRow_Loaded(object sender, RoutedEventArgs e)
+    {
+        var row = (Grid)sender;
+        for (int index = 0; index < row.ColumnDefinitions.Count; index++)
+        {
+            Microsoft.UI.Xaml.Data.BindingOperations.SetBinding(
+                row.ColumnDefinitions[index], ColumnDefinition.WidthProperty,
+                new Microsoft.UI.Xaml.Data.Binding
+                {
+                    Source = DeviceHeaders.ColumnDefinitions[index],
+                    Path = new PropertyPath("Width"),
+                    Mode = Microsoft.UI.Xaml.Data.BindingMode.OneWay
+                });
+        }
+    }
+
+    private void DeviceColumn_DragDelta(object sender, Microsoft.UI.Xaml.Controls.Primitives.DragDeltaEventArgs e)
+    {
+        int index = int.Parse(((FrameworkElement)sender).Tag.ToString()!);
+        _deviceColumnsResized = true;
+        ColumnDefinition column = DeviceHeaders.ColumnDefinitions[index];
+        column.Width = new GridLength(Math.Clamp(column.Width.Value + e.HorizontalChange, 40, 1200));
+        DeviceTable.Width = DeviceHeaders.ColumnDefinitions.Sum(item => item.Width.Value) + 64;
+    }
+
+    private void SortDevices_Click(object sender, RoutedEventArgs e)
+    {
+        int column = int.Parse(((Button)sender).Tag.ToString()!);
+        _deviceSortDescending = column == _deviceSortColumn && !_deviceSortDescending;
+        _deviceSortColumn = column;
+        string[] names = { "Alias", "Device Name", "Port", "Serial Number" };
+        foreach (Button header in DeviceHeaders.Children.OfType<Button>())
+        {
+            int index = int.Parse(header.Tag.ToString()!);
+            header.Content = names[index] + (index == column ? (_deviceSortDescending ? " ↓" : " ↑") : "");
+        }
+        SortDevices();
+    }
+
+    private void SortDevices()
+    {
+        if (_deviceSortColumn < 0) return;
+        string Key(DeviceRow device) => _deviceSortColumn switch
+        {
+            0 => device.Alias,
+            1 => device.Name,
+            2 => device.Port,
+            _ => device.SerialNumber
+        };
+        var comparer = Comparer<DeviceRow>.Create((left, right) =>
+        {
+            string a = Key(left), b = Key(right);
+            int result;
+            if (_deviceSortColumn == 2 &&
+                a.StartsWith("COM", StringComparison.OrdinalIgnoreCase) &&
+                b.StartsWith("COM", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(a.AsSpan(3), out int portA) && int.TryParse(b.AsSpan(3), out int portB))
+                result = portA.CompareTo(portB);
+            else
+                result = StringComparer.CurrentCultureIgnoreCase.Compare(a, b);
+            return _deviceSortDescending ? -result : result;
+        });
+        DeviceRow[] ordered = Devices.OrderBy(device => device, comparer).ToArray();
+        for (int index = 0; index < ordered.Length; index++)
+            Devices.Move(Devices.IndexOf(ordered[index]), index);
+    }
+
     private readonly USBWatcherCore _watcher;
     private readonly System.Windows.Forms.NotifyIcon _trayIcon;
     private readonly AppUpdateService _updateService;
@@ -178,6 +263,7 @@ public sealed partial class MainWindow : Window
                 Pid = device.PID
             });
         }
+        SortDevices();
     }
 
     private void AddDeviceEvents(DeviceChangeEventArgs args)

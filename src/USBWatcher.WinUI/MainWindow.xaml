@@ -6,6 +6,23 @@
     Title="USBWatcher">
 
     <Grid x:Name="Root" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.Resources>
+            <Style x:Key="ColumnResizeThumbStyle" TargetType="Thumb">
+                <Setter Property="Width" Value="8" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <local:ColumnResizeSurface Background="Transparent">
+                                <Border Width="1" Height="18" HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                            </local:ColumnResizeSurface>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="68" />
             <RowDefinition Height="*" />
@@ -37,12 +54,15 @@
             <Border Grid.Row="0" CornerRadius="8" BorderThickness="1"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
-                <Grid>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled"
+                              SizeChanged="DeviceViewport_SizeChanged">
+                <Grid x:Name="DeviceTable" Width="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="42" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Grid Grid.Row="0" Padding="14,0" ColumnSpacing="12" BorderThickness="0,0,0,1"
+                    <Grid x:Name="DeviceHeaders" Grid.Row="0" Padding="14,0" ColumnSpacing="12" BorderThickness="0,0,0,1"
                           BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="2*" />
@@ -50,10 +70,14 @@
                             <ColumnDefinition Width="1*" />
                             <ColumnDefinition Width="1.6*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Alias" Style="{StaticResource ColumnHeaderStyle}" />
-                        <TextBlock Grid.Column="1" Text="Device Name" Style="{StaticResource ColumnHeaderStyle}" />
-                        <TextBlock Grid.Column="2" Text="Port" Style="{StaticResource ColumnHeaderStyle}" />
-                        <TextBlock Grid.Column="3" Text="Serial Number" Style="{StaticResource ColumnHeaderStyle}" />
+                        <Button Content="Alias" Tag="0" Click="SortDevices_Click" HorizontalAlignment="Stretch" Margin="0,0,8,0" Padding="0" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" />
+                        <Button Grid.Column="1" Content="Device Name" Tag="1" Click="SortDevices_Click" HorizontalAlignment="Stretch" Margin="0,0,8,0" Padding="0" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" />
+                        <Button Grid.Column="2" Content="Port" Tag="2" Click="SortDevices_Click" HorizontalAlignment="Stretch" Margin="0,0,8,0" Padding="0" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" />
+                        <Button Grid.Column="3" Content="Serial Number" Tag="3" Click="SortDevices_Click" HorizontalAlignment="Stretch" Margin="0,0,8,0" Padding="0" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Left" />
+                        <Thumb Tag="0" DragDelta="DeviceColumn_DragDelta" Style="{StaticResource ColumnResizeThumbStyle}" ToolTipService.ToolTip="Drag to resize Alias" />
+                        <Thumb Grid.Column="1" Tag="1" DragDelta="DeviceColumn_DragDelta" Style="{StaticResource ColumnResizeThumbStyle}" ToolTipService.ToolTip="Drag to resize Device Name" />
+                        <Thumb Grid.Column="2" Tag="2" DragDelta="DeviceColumn_DragDelta" Style="{StaticResource ColumnResizeThumbStyle}" ToolTipService.ToolTip="Drag to resize Port" />
+                        <Thumb Grid.Column="3" Tag="3" DragDelta="DeviceColumn_DragDelta" Style="{StaticResource ColumnResizeThumbStyle}" ToolTipService.ToolTip="Drag to resize Serial Number" />
                     </Grid>
                     <ListView x:Name="DevicesList" Grid.Row="1" ItemsSource="{x:Bind Devices}" SelectionMode="Single"
                               DoubleTapped="DevicesList_DoubleTapped" IsItemClickEnabled="True">
@@ -66,7 +90,7 @@
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnSpacing="12" Background="Transparent">
+                                <Grid ColumnSpacing="12" Background="Transparent" Loaded="DeviceRow_Loaded">
                                     <Grid.ContextFlyout>
                                         <MenuFlyout>
                                             <MenuFlyoutItem Text="Rename" Tag="{Binding}" Click="RenameDevice_Click" />
@@ -81,11 +105,15 @@
                                         <ColumnDefinition Width="1*" />
                                         <ColumnDefinition Width="1.6*" />
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
                                         <FontIcon Glyph="&#xE88E;" FontFamily="Segoe Fluent Icons" FontSize="18"
                                                   Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
-                                        <TextBlock Text="{Binding Alias}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                    </StackPanel>
+                                        <TextBlock Grid.Column="1" Text="{Binding Alias}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </Grid>
                                     <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="2" Text="{Binding Port}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="3" Text="{Binding SerialNumber}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
@@ -94,6 +122,7 @@
                         </ListView.ItemTemplate>
                     </ListView>
                 </Grid>
+                </ScrollViewer>
             </Border>
 
             <Border Grid.Row="1" CornerRadius="8" BorderThickness="1"
